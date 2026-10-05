@@ -1,6 +1,6 @@
 # data/ (not tracked by git)
 
-Expected layout (override the root with the environment variable NRI_DATA_DIR):
+Expected layout (override the root with the environment variable DATA_DIR):
 
     data/
       inputs/

@@ -8,7 +8,7 @@
 #     MEMBERSHIP_BUFFER_KM (default 200 m)
 #
 # The result is a GLOBAL layer (Antarctica included) that can be used for any
-# application; project domains (e.g. NRI: centroid latitude >= -60) are applied
+# application; study domains (here: centroid latitude >= -60) are applied
 # downstream. Reference build (OSM snapshot 2026-09-30): 474 layers,
 # 126,509,398 cells.
 #
@@ -34,7 +34,7 @@
 # Run from the repository root:   Rscript R/01_build_dgg.R
 # Inputs (see README):  data/inputs/ne_10m_land/ne_10m_land.shp
 #                       data/inputs/land-polygons-split-4326/land_polygons.shp
-# Override the data folder with the environment variable NRI_DATA_DIR.
+# Override the data folder with the environment variable DATA_DIR.
 # ---------------------------------------------------------------------------
 
 library(dggridR)
@@ -51,7 +51,7 @@ options(scipen = 999)
 
 # NOTE: a new directory. Pointing this at a populated OUT_DIR with RESUME
 # FALSE stops the run; with RESUME TRUE it continues an interrupted one.
-DATA_DIR <- Sys.getenv("NRI_DATA_DIR", unset = "data")
+DATA_DIR <- Sys.getenv("DATA_DIR", unset = "data")
 OUT_DIR  <- file.path(DATA_DIR, "dgg")
 RESUME  <- FALSE
 
@@ -96,8 +96,8 @@ MEMBERSHIP_BUFFER_KM <- 0.2
 
 # Southern limit of the EXPORT. Default -90: the layer is a portable, global all-land DGG.
 # Tiles are owned by centroid, so a higher value (e.g. -60) skips every tile with lat0 < MIN_LAT
-# and the south polar cap. Project-specific domains are applied downstream instead (the NRI
-# post-processing and GEE extraction lists use cells with centroid latitude >= -60).
+# and the south polar cap. Study domains are applied downstream instead (the GEE extraction
+# and post-processing use cells with centroid latitude >= -60).
 MIN_LAT <- -90
 
 # Performance: OSM coastlines carry millions of vertices per tile (e.g. Baltic/Finnish
@@ -1010,13 +1010,13 @@ if (!interactive()) {
 # Small files: Assets tab -> New -> Shape files (or CSV file).
 # Large or many files: stage in Cloud Storage, then
 #
-#   gsutil -m cp data/dgg/*.zip gs://YOUR_BUCKET/dgg/
+#   gsutil -m cp data/dgg/*.zip gs://[PLACEHOLDER-bucket]/dgg/
 #   earthengine upload table \
-#     --asset_id=projects/YOUR_PROJECT/assets/dgg_isea3h16_land_n40_w080 \
-#     gs://YOUR_BUCKET/dgg/dgg_isea3h16_land_n40_w080.zip
+#     --asset_id=projects/[PLACEHOLDER-project]/assets/dgg_isea3h16_land_n40_w080 \
+#     gs://[PLACEHOLDER-bucket]/dgg/dgg_isea3h16_land_n40_w080.zip
 #
 # For a WKT CSV add: --primary_geometry_column=wkt
 # seqnum ingests as a STRING property; ee.Number.parse() recovers the integer.
 # A manifest with several `sources` entries ingests many tiles into one asset,
-# still subject to the 100-million-feature limit. For the NRI extraction upload one
+# still subject to the 100-million-feature limit. For the count extraction upload one
 # asset per layer whose tile lat0 >= -60 (into one asset folder); see gee/03_extract_counts.js.

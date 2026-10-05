@@ -22,7 +22,7 @@ library(dggridR)
 library(sf)
 
 
-DATA_DIR     <- Sys.getenv("NRI_DATA_DIR", unset = "data")
+DATA_DIR     <- Sys.getenv("DATA_DIR", unset = "data")
 EXPORT_DIR   <- file.path(DATA_DIR, "dgg")
 V2_DIR       <- NA         # optional reference grid folder for check 7 (NA = skip)
 PREFIX       <- "dgg_isea3h16_land"

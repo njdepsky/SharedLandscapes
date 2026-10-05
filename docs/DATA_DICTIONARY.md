@@ -5,9 +5,9 @@ Study domain of the counts and results: cells whose centroid latitude ≥ 60°S 
 
 ## Grid
 
-### `dgg_isea3h16_land_v4_shapefiles.zip`
+### `dgg_isea3h16_land_v4_shapefiles_partNNofMM.zip`
 
-474 zipped shapefiles, one per layer: `dgg_isea3h16_land_<n|s>LL_<e|w>LLL.zip` (10° × 10° tile
+Parts of ~1 GB, each holding whole layers; together 474 zipped shapefiles, one per layer: `dgg_isea3h16_land_<n|s>LL_<e|w>LLL.zip` (10° × 10° tile
 named by its south-west corner) and `dgg_isea3h16_land_south_cap.zip`. Each cell belongs to the
 layer containing its centroid; together the layers hold every cell exactly once (126,509,398).
 
@@ -16,9 +16,9 @@ layer containing its centroid; together the layers hold every cell exactly once 
 | `seqnum` | text | cell id (DGGRID sequence number), stored as text because 9-digit integers overflow shapefile numeric fields |
 | geometry | polygon / multipolygon | cell boundary; cells crossing ±180° are split into east and west parts |
 
-### `dgg_isea3h16_land_v4_centroids.zip`
+### `dgg_isea3h16_land_v4_centroids_partNNofMM.zip`
 
-474 CSV files, `<layer>_pts.csv`, one row per cell.
+Parts of ~1 GB, each holding whole files; together 474 CSV files, `<layer>_pts.csv`, one row per cell.
 
 | Column | Type | Description |
 |---|---|---|
@@ -52,10 +52,11 @@ fall inside the cell; definitions in `docs/METHODS.md`.
 | `n_nonhabitat` | land pixels that are crop, built-up, pasture or tree crop |
 | `n_habitat` | `n_land − n_nonhabitat` |
 
-## `dgg_cells_shared_landscapes.parquet` — per-cell results
+## `dgg_cells_shared_landscapes_partNNofMM.parquet` — per-cell results
 
-One row per domain cell (114,791,301); 42 columns. Storage types: `seqnum`, `gaul0_code` int64;
-text fields dictionary-encoded strings; `wrapped`, `wl12`, `shl20`, `has_gee`, `gee_geom_ok`
+One row per domain cell (114,791,301), split into parts of ~10 million consecutive rows ordered
+by `seqnum` (read all parts together); 42 columns. Storage types: `seqnum`, `gaul0_code` int64;
+text fields strings; `wrapped`, `popland`, `shland`, `has_gee`, `gee_geom_ok`
 boolean; all other columns float64 (pixel counts are whole numbers stored as float64).
 
 **Location and country**
@@ -91,36 +92,34 @@ boolean; all other columns float64 (pixel counts are whole numbers stored as flo
 | `habitat_area_km2` | habitat area, likewise from `n_habitat` |
 | `land_pixel_km2`, `habitat_pixel_km2` | as above (pixel method; identical to `land_area_km2`, `habitat_area_km2`) |
 | `land_baseline_km2`, `habitat_baseline_km2` | alternative cell-fraction areas, 1.18491 × `n_land` / `n_total` (resp. `n_habitat`); for comparison only |
-| `nonhabitat_cover` | `n_nonhabitat / n_land` |
-| `habitat_cover` | `n_habitat / n_land` |
-| `pop_density_wl` | persons per km² of land, `pop_sum / land_area_km2` (used for the classification) |
-| `wl12` | Working Landscape: `n_land` > 0, `nonhabitat_cover` > 0.01 and `pop_density_wl` ≥ 1 |
-| `shl20` | Shared Landscape: `wl12` and `habitat_cover` ≥ 0.20 |
+| `nonhabitat_share` | non-habitat share of the cell's land, `n_nonhabitat / n_land` |
+| `habitat_share` | habitat share of the cell's land, `n_habitat / n_land` (= `habitat_area_km2 / land_area_km2`) |
+| `pop_density_land` | persons per km² of land, `pop_sum / land_area_km2` (used for the classification) |
+| `popland` | Populated Landscape: `n_land` > 0, `nonhabitat_share` > 0.01 and `pop_density_land` ≥ 1 |
+| `shland` | Shared Landscape: `popland` and `habitat_share` ≥ 0.20 |
 | `has_gee` | Earth Engine counts present (true for every domain cell) |
 | `gee_count_ratio` | QA: `n_total` × pixel area / `cell_area_km2` (≈ 1 for fully valid cells) |
 | `gee_geom_ok` | QA: `gee_count_ratio` ≤ 1.02 (true for every cell) |
 
 ## Summary tables
 
-`global_summary.csv`: `metric`, `area_km2`, `share` — total land; Working, Supporting, Shared
-and Simplified Landscapes; habitat in Working and Supporting Landscapes. `share` is relative to
-total land, except for habitat in Working / Supporting (relative to total habitat) and Shared /
-Simplified within Working (relative to Working Landscapes).
+`global_summary.csv`: `metric`, `area_km2`, `share` — total land; Populated Landscapes; total
+habitat; habitat in Populated Landscapes; Shared Landscapes; Shared Landscapes within Populated
+Landscapes. `share` is relative to total land, except for habitat in Populated Landscapes
+(relative to total habitat) and Shared within Populated (relative to Populated Landscapes).
 
-`region_summary.csv` (by continent, column `group`) and `country_summary.csv` (by de facto
-country: `group` = name, `iso3`; `--` = unassigned) share these columns:
+`country_summary.csv` (by de facto country: `group` = name, `iso3`; `--` = unassigned):
 
 | Column | Description |
 |---|---|
 | `land_area_km2` | land |
-| `estimated_full_land_km2` | identical to `land_area_km2` (kept for format compatibility) |
-| `working_land_area_km2`, `supporting_land_area_km2` | land in Working / Supporting Landscapes |
+| `populated_land_area_km2` | land in Populated Landscapes |
 | `total_habitat_area_km2` | habitat |
-| `habitat_in_working_area_km2`, `habitat_in_supporting_area_km2` | habitat in Working / Supporting Landscapes |
-| `shl_land_area_km2`, `sil_land_area_km2` | land in Shared / Simplified Landscapes |
-| `shl_habitat_area_km2`, `sil_habitat_area_km2` | habitat in Shared / Simplified Landscapes |
+| `habitat_in_populated_area_km2` | habitat in Populated Landscapes |
+| `shl_land_area_km2` | land in Shared Landscapes |
+| `shl_habitat_area_km2` | habitat in Shared Landscapes |
 | `n_hex` | cells with land (`n_land` > 0) |
-| `share_land_working`, `share_land_supporting` | Working / Supporting share of land |
-| `share_habitat_in_working`, `share_habitat_in_supporting` | share of habitat in Working / Supporting Landscapes |
+| `share_land_populated` | Populated Landscape share of land |
+| `share_habitat_in_populated` | share of habitat in Populated Landscapes |
 | `share_shl_land` | Shared Landscape share of land |
-| `share_shl_within_working`, `share_sil_within_working` | Shared / Simplified share of Working Landscapes |
+| `share_shl_within_populated` | Shared Landscape share of Populated Landscapes |

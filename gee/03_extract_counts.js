@@ -34,14 +34,14 @@
  * 1. Settings
  *****************************/
 var YEAR = 2024;
-var ASSET_FOLDER = 'projects/YOUR_PROJECT/assets/nri_dgg';   // one table asset per DGG layer
+var ASSET_FOLDER = 'projects/[PLACEHOLDER-project]/assets/dgg_isea3h16_land';   // [PLACEHOLDER] one table asset per DGG layer
 var LAYER_PREFIX = 'dgg_isea3h16_land_';
 var MIN_LAT = -60;                // project domain: layers with tile lat0 >= MIN_LAT
 var FIRST_LAYER = 0;              // process sorted domain layers [FIRST_LAYER, FIRST_LAYER + N_LAYERS)
 var N_LAYERS = 50;
 var N_BATCHES = 1;                // exports per layer (seqnum mod N_BATCHES); raise only if needed
 
-var EXPORT_FOLDER = 'nri_dgg_counts';
+var EXPORT_FOLDER = 'dgg_counts';
 var EXPORT_PREFIX = 'dgg_counts_' + YEAR;   // file: <prefix>_<layer>_b<batch>.csv
 
 var THRESHOLD_PCT_WATER = 95;

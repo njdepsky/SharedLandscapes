@@ -7,7 +7,7 @@ Code to reproduce the data for 'A global dataset of potential habitat areas in p
    WorldCover 2021, Global Pasture Watch, Spatial Database of Planted Trees);
 3. add **country** (GAUL 2024, de facto policy for disputed areas) and **population**
    (WorldPop R2025A 2024, 100 m) to every cell;
-4. calculate landscape extents (Supporting / Working / Shared) and write **global, continent and country summaries**.
+4. calculate habitat and landscape extents (Populated / Shared) and write **global and country summaries**.
 
 Data: **Zenodo DOI: [10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)** — grid, GEE counts, per-cell
 results and summary tables (see [Data on Zenodo](#data-on-zenodo)).
@@ -112,11 +112,11 @@ It must run from a terminal (it starts worker processes), not a notebook.
 - `dgg_cells_country_population.parquet` — one row per domain cell: centroid, GAUL fields,
   de facto `iso3_admin`, assignment source, cell area, population (`pop_sum`, `pop_density`).
 - `dgg_cells_shared_landscapes.parquet` — the above plus GEE counts, `land_area_km2`,
-  `habitat_area_km2`, cover fractions, `wl12`, `shl20`.
-- `summaries/global_summary.csv`, `region_summary.csv` (by continent), `country_summary.csv`.
+  `habitat_area_km2`, `habitat_share`, `popland` (Populated Landscape), `shland` (Shared Landscape).
+- `summaries/global_summary.csv`, `country_summary.csv`.
 
 Reference run (OSM 2026-09-30, Dynamic World 2024, WorldPop 2024): 114,791,301 domain cells;
-land 127.61 million km²; Working Landscapes 26.14 million km² (20.5% of land); Shared
+land 127.61 million km²; Populated Landscapes 26.14 million km² (20.5% of land); Shared
 Landscapes 18.87 million km² (14.8% of land); 100.00% of WorldPop population captured.
 
 ## Method summary
@@ -127,13 +127,16 @@ See [`docs/METHODS.md`](docs/METHODS.md).
 
 | File | Content |
 |---|---|
-| `dgg_isea3h16_land_v4_shapefiles.zip` | global land DGG: 474 zipped layer shapefiles (`seqnum` as text), 126,509,398 cells |
-| `dgg_isea3h16_land_v4_centroids.zip` | cell centroids per layer (`seqnum`, `longitude`, `latitude`) |
+| `dgg_isea3h16_land_v4_shapefiles_partNNofMM.zip` | global land DGG: 474 zipped layer shapefiles (`seqnum` as text), 126,509,398 cells, grouped into ~1 GB parts |
+| `dgg_isea3h16_land_v4_centroids_partNNofMM.zip` | cell centroids per layer (`seqnum`, `longitude`, `latitude`), grouped into ~1 GB parts |
 | `dgg_isea3h16_land_manifest.csv` | layers, cell counts |
 | `dgg_counts_2024.parquet` | Earth Engine pixel counts for the 114,791,301 cells with centroid latitude ≥ 60°S (input of step 5) |
-| `dgg_cells_shared_landscapes.parquet` | per-cell results: country, population, counts, land and habitat areas, landscape classes |
-| `global_summary.csv`, `region_summary.csv`, `country_summary.csv` | summary tables |
+| `dgg_cells_shared_landscapes_partNNofMM.parquet` | per-cell results: country, population, counts, land and habitat areas, landscape classes; ~10 million rows per part, ordered by `seqnum` |
+| `global_summary.csv`, `country_summary.csv` | summary tables |
 | `DATA_DICTIONARY.md` | column definitions for all files (also in [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md)) |
+
+Every part is self-contained: unzip the parts into one folder to obtain all layers, and read all
+parquet parts together, e.g. `pd.read_parquet(sorted(glob.glob("dgg_cells_shared_landscapes_part*.parquet")))`.
 
 WorldPop, GAUL, Natural Earth and OSM inputs are not redistributed; download them from their
 sources above.

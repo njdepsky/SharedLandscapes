@@ -1,7 +1,7 @@
 """Configuration for the Python steps (04_download_worldpop.py, 05_postprocess.py).
 
-All paths default to the repository's data/ folder; set the environment variable NRI_DATA_DIR
-to use another location (e.g. a fast local disk), and NRI_WORK_DIR for the large intermediate
+All paths default to the repository's data/ folder; set the environment variable DATA_DIR
+to use another location (e.g. a fast local disk), and WORK_DIR for the large intermediate
 caches. This module must stay free of I/O: 05_postprocess.py's worker processes import it.
 """
 
@@ -9,8 +9,8 @@ import os
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-DATA_DIR = Path(os.environ.get("NRI_DATA_DIR") or REPO / "data")
-WORKDIR = Path(os.environ.get("NRI_WORK_DIR") or DATA_DIR / "work")   # caches (tens of GB)
+DATA_DIR = Path(os.environ.get("DATA_DIR") or REPO / "data")
+WORKDIR = Path(os.environ.get("WORK_DIR") or DATA_DIR / "work")   # caches (tens of GB)
 OUT_DIR = DATA_DIR / "outputs"
 
 # --- Inputs ---------------------------------------------------------------------------------
@@ -45,11 +45,11 @@ ID_FIELD = None             # cell-id field in the DGG shapefiles; None = auto-d
 # as 0 people inside the raster's latitude extent (cells outside the extent get NaN).
 NODATA_AS_ZERO = True
 
-# --- Landscape classification (WL12-DWP40-WP100-SHL20) ---------------------------------------
+# --- Landscape classification ---------------------------------------------------------------
 LAND_AREA_METHOD = "pixel"   # "pixel": n_land x 10 m pixel area | "baseline": 1.18491 x n_land/n_total
-NONHABITAT_THRESHOLD = 0.01            # Working Landscape: nonhabitat cover > 1% of land ...
+NONHABITAT_THRESHOLD = 0.01            # Populated Landscape: non-habitat share > 1% of land ...
 POPULATION_DENSITY_THRESHOLD = 1.0     # ... and >= 1 person per km2 of land
-SHL_HABITAT_THRESHOLD = 0.20           # Shared Landscape: Working + habitat cover >= 20%
+SHL_HABITAT_THRESHOLD = 0.20           # Shared Landscape: Populated + habitat share >= 20%
 POP_DENSITY_BASIS = "land"             # "land": people / land area | "cell": people / cell area
 N_HEX_RULE = "n_land>0"                # cells counted in n_hex: "n_land>0" | "n_total>0" | "all"
 
