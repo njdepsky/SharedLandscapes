@@ -1,0 +1,83 @@
+# Citation metadata (https://citation-file-format.github.io). [PLACEHOLDER] items: fill before release.
+cff-version: 1.2.0
+message: "If you use this code or the dataset, please cite the article below and the Zenodo dataset."
+type: software
+title: "Habitat Areas in Populated Landscapes — A Global DGG Computational Pipeline"
+license: MIT
+repository-code: "https://github.com/njdepsky/SharedLandscapes"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23168754"
+    description: "Zenodo dataset: grid, Earth Engine counts, per-cell results and summary tables (ODbL 1.0)"
+authors:
+  - given-names: Nicholas
+    family-names: Depsky
+    email: nicholas.depsky@undp.org
+    affiliation: "Human Development Report Office (HDRO), United Nations Development Programme, New York, New York 10017, USA"
+  - given-names: Erle C.
+    family-names: Ellis
+    email: ece@umbc.edu
+    affiliation: "Geography & Environmental Systems, University of Maryland, Baltimore County, Baltimore, Maryland 21250, USA"
+  - given-names: Jesse F.
+    family-names: Abrams
+    affiliation: "Global Systems Institute, University of Exeter, Exeter EX4 4QE, UK"
+  - given-names: Jinwei
+    family-names: Dong
+    affiliation: "Institute of Geographic Sciences and Natural Resources Research, Chinese Academy of Sciences, Beijing 100101, China"
+  - given-names: Le
+    family-names: Yu
+    affiliation: "Department of Earth System Science, Ministry of Education Key Laboratory for Earth System Modeling, Institute for Global Change Studies, Tsinghua University, Beijing 100084, China"
+  - given-names: Yuanyuan
+    family-names: Di
+    affiliation: "Institute of Geographic Sciences and Natural Resources Research, Chinese Academy of Sciences, Beijing 100101, China"
+  - given-names: Binyan
+    family-names: Lyu
+    affiliation: "Institute of Geographic Sciences and Natural Resources Research, Chinese Academy of Sciences, Beijing 100101, China"
+  - given-names: Zhenrong
+    family-names: Du
+    affiliation: "School of Information and Communication Engineering, Dalian University of Technology, Dalian 116024, China"
+  - given-names: Peter
+    family-names: Verburg
+    affiliation: "Institute for Environmental Studies, Vrije Universiteit, 1081 HV Amsterdam, Netherlands"
+  - given-names: Heriberto
+    family-names: Tapia
+    affiliation: "Human Development Report Office (HDRO), United Nations Development Programme, New York, New York 10017, USA"
+preferred-citation:
+  type: article
+  title: "A global dataset of potential habitat areas in populated landscapes"
+  authors:
+    - given-names: Nicholas
+      family-names: Depsky
+      email: nicholas.depsky@undp.org
+      affiliation: "Human Development Report Office (HDRO), United Nations Development Programme, New York, New York 10017, USA"
+    - given-names: Erle C.
+      family-names: Ellis
+      email: ece@umbc.edu
+      affiliation: "Geography & Environmental Systems, University of Maryland, Baltimore County, Baltimore, Maryland 21250, USA"
+    - given-names: Jesse F.
+      family-names: Abrams
+      affiliation: "Global Systems Institute, University of Exeter, Exeter EX4 4QE, UK"
+    - given-names: Jinwei
+      family-names: Dong
+      affiliation: "Institute of Geographic Sciences and Natural Resources Research, Chinese Academy of Sciences, Beijing 100101, China"
+    - given-names: Le
+      family-names: Yu
+      affiliation: "Department of Earth System Science, Ministry of Education Key Laboratory for Earth System Modeling, Institute for Global Change Studies, Tsinghua University, Beijing 100084, China"
+    - given-names: Yuanyuan
+      family-names: Di
+      affiliation: "Institute of Geographic Sciences and Natural Resources Research, Chinese Academy of Sciences, Beijing 100101, China"
+    - given-names: Binyan
+      family-names: Lyu
+      affiliation: "Institute of Geographic Sciences and Natural Resources Research, Chinese Academy of Sciences, Beijing 100101, China"
+    - given-names: Zhenrong
+      family-names: Du
+      affiliation: "School of Information and Communication Engineering, Dalian University of Technology, Dalian 116024, China"
+    - given-names: Peter
+      family-names: Verburg
+      affiliation: "Institute for Environmental Studies, Vrije Universiteit, 1081 HV Amsterdam, Netherlands"
+    - given-names: Heriberto
+      family-names: Tapia
+      affiliation: "Human Development Report Office (HDRO), United Nations Development Programme, New York, New York 10017, USA"
+  journal: "Data in Brief"
+  year: 2026
+  # [PLACEHOLDER: add  doi: "10.1016/..."  here once the article DOI is assigned]

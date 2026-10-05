@@ -1,0 +1,19 @@
+# Python environment for python/04_download_worldpop.py and python/05_postprocess.py.
+# Pin exact versions for a release with:  conda env export > environment.lock.yml
+name: populated-landscapes-dgg
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - pandas>=2.0
+  - pyarrow
+  - dask
+  - dask-geopandas
+  - geopandas>=1.0
+  - pyogrio
+  - shapely>=2.0
+  - pyproj
+  - rasterio
+  - gdal            # provides gdalbuildvrt (step 4) with a PROJ database matching this env
+  - exactextract    # coverage-weighted zonal statistics (step 5)
