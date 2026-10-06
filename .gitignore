@@ -1,6 +1,5 @@
-# data and large outputs live on Zenodo / local disk, not in git
-data/*
-!data/DATA_README.md
+# data and outputs live on Zenodo / local disk, not in git
+data/
 *.log
 __pycache__/
 .DS_Store

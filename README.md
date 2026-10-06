@@ -9,8 +9,10 @@ Code to reproduce the data for 'A global dataset of potential habitat areas in p
    (WorldPop R2025A 2024, 100 m) to every cell;
 4. calculate habitat and landscape extents (Populated / Shared) and write **global and country summaries**.
 
-Data: **Zenodo DOI: [10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)** — grid, GEE counts, per-cell
-results and summary tables (see [Data on Zenodo](#data-on-zenodo)).
+**Data:** all published data are on Zenodo — **[doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)**
+(https://zenodo.org/records/23168754): the global grid, cell centroids and country assignment,
+per-cell results and summary tables (see [Data on Zenodo](#data-on-zenodo)). This repository
+contains code and documentation only.
 
 ---
 
@@ -46,6 +48,30 @@ Rscript R/00_install_packages.R
 Tested on macOS (Apple silicon, 128 GB RAM): GEOS 3.13.0, GDAL 3.8.5, PROJ 9.5.1, Python 3.10.
 For exact reproducibility pin your environment (`conda env export > environment.lock.yml`;
 `renv::snapshot()` for R) and commit the lock files.
+
+### Local data folder
+
+The scripts read and write a local `data/` folder (not part of the repository). Create it and
+place the inputs as below; set the environment variable `DATA_DIR` to use another location, and
+`WORK_DIR` for the caches.
+
+```bash
+mkdir -p data/inputs
+```
+
+    data/
+      inputs/
+        ne_10m_land/ne_10m_land.shp                      Natural Earth 10m land
+        land-polygons-split-4326/land_polygons.shp       OSM land polygons (WGS84, split)
+        ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp
+        GAUL_2024_L1/GAUL_2024_L1.shp                    FAO GAUL 2024, level 1 (download)
+        gaul2024_l0.gpkg                                 written by python/00_prepare_gaul_l0.py
+        worldpop/R2025A_100m_2024/                       written by python/04_download_worldpop.py
+      dgg/                                               written by R/01_build_dgg.R
+      gee_counts/raw/                                    Earth Engine CSVs (step 3)
+      gee_counts/dgg_counts_2024.csv.gz                  written by python/03b_combine_counts.py
+      work/                                              caches of python/05_postprocess.py (tens of GB)
+      outputs/                                           published files (see Outputs)
 
 ## Inputs (place in `data/inputs/`)
 
