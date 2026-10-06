@@ -9,10 +9,15 @@ Code to reproduce the data for 'A global dataset of potential habitat areas in p
    (WorldPop R2025A 2024, 100 m) to every cell;
 4. calculate habitat and landscape extents (Populated / Shared) and write **global and country summaries**.
 
-**Data:** all published data are on Zenodo — **[doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)**
-(https://zenodo.org/records/23168754): the global grid, cell centroids and country assignment,
-per-cell results and summary tables (see [Data on Zenodo](#data-on-zenodo)). This repository
-contains code and documentation only.
+**Two spatial extents.** The grid is built for the **whole globe (90°S–90°N): 126,509,398 land
+cells**, published as a stand-alone layer (file names marked `S90_N90`). All analysis — Earth
+Engine pixel counts, country assignment, population and landscape classification — covers only
+the **cells whose centroid lies at or north of 60°S: 114,791,301 cells** (file names marked
+`S60_N90`). Antarctica and other land south of 60°S is in the grid but not in the analysis.
+
+**Data:** **[doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)** — the global
+grid, cell centroids and country assignment, per-cell results and summary tables (see
+[Data on Zenodo](#data-on-zenodo)). This repository contains code and documentation only.
 
 ---
 

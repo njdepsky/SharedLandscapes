@@ -1,8 +1,13 @@
 # Data dictionary
 
 Grid: ISEA3H resolution 16 (DGGRID), WGS84 (EPSG:4326). Areas in km², population in persons.
-Study domain of the country assignment, counts and results: cells whose centroid latitude ≥ 60°S
-(114,791,301 cells).
+
+**Two spatial extents:**
+- `S90_N90` — the global grid, all latitudes (90°S–90°N): 126,509,398 land cells
+  (`dgg_isea3h16_land_shapefiles_S90_N90.zip`).
+- `S60_N90` — the analysis domain, cells whose centroid lies at or north of 60°S: 114,791,301 cells
+  (centroids and country assignment, per-cell results, summaries). Cells south of 60°S are in the
+  grid but not in the analysis.
 
 **Gzip CSV conventions** (`*.csv.gz`): one row per cell, sorted by `seqnum`; empty fields are
 missing values; pixel counts and `gaul0_code` are integers; flags are 1 (true) or 0 (false).
