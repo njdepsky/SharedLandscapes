@@ -28,11 +28,14 @@ one table, or every file matching a pattern in a folder), GAUL 2024 L0, Natural 
 WorldPop VRT (04_download_worldpop.py).
 
 Outputs (config.OUT_DIR)
-  dgg_cells_country_population.parquet   one row per domain cell: country fields, cell area,
-                                         population (pop_sum, pop_density)
-  dgg_cells_shared_landscapes.csv.gz     + GEE counts, land / habitat areas and fractions, popland, shland
-                                         (gzip CSV; see write_cells_csv for columns and precision)
-  summaries/global_summary.csv, country_summary.csv
+  dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz      cell centroids and country assignment
+  dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz   per-cell counts, population, areas,
+                                                       fractions, popland, shland
+  dataset_summaries.zip                                global_summary.csv + country_summary.csv
+                                                       (also written unzipped in dataset_summaries/)
+  dgg_cells_country_population.parquet                 intermediate: country fields, cell area,
+                                                       population
+  (all CSVs gzip; column lists and precision: CENTROID_COUNTRY_COLS, CELL_COLS, CSV_DECIMALS)
 
 Run from the repository root, in a terminal (worker processes cannot import a notebook):
     python -u python/05_postprocess.py 2>&1 | tee postprocess.log
@@ -48,6 +51,7 @@ import multiprocessing as mp
 import re
 import shutil
 import time
+import zipfile
 import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
@@ -95,8 +99,11 @@ STEP1_INC = WORKDIR / "step1_country_join_increments"
 STEP2 = WORKDIR / "step2_nearest_country.parquet"
 ZONALDIR = WORKDIR / f"zonal_population_{Path(WORLDPOP).stem}"   # one parquet per DGG layer
 OUT = OUT_DIR / "dgg_cells_country_population.parquet"
-FINAL = OUT_DIR / "dgg_cells_shared_landscapes.csv.gz"
-SUMMARY_DIR = OUT_DIR / "summaries"
+# Published outputs (file names as deposited)
+CENTROIDS_COUNTRY = OUT_DIR / "dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz"
+FINAL = OUT_DIR / "dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz"
+SUMMARY_DIR = OUT_DIR / "dataset_summaries"
+SUMMARY_ZIP = OUT_DIR / "dataset_summaries.zip"
 
 HEX_AREA_KM2 = 1.18491  # nominal ISEA3H resolution-16 cell area (baseline land method)
 GEE_PIXEL_DEG = 10 / 111319.49079327357  # GEE: 10 m scale in EPSG:4326 -> degrees per pixel
@@ -104,6 +111,8 @@ GEE_RATIO_MAX = 1.02  # QA: counted pixel area / cell area above this = invalid 
 WGS84_A_KM, WGS84_E2 = 6378.137, 0.00669437999014
 GEE_ID = "seqnum16"
 GEE_REQUIRED = ["n_total", "n_land", "n_nonhabitat", "n_habitat"]
+GEE_BANDS = ["n_total", "n_land", "n_freshwater", "n_ice", "n_barren", "n_built", "n_crop", "n_pasture",
+             "n_other_intensive_treecrop", "n_nonhabitat", "n_habitat"]   # Earth Engine count columns
 GEOD = Geod(ellps="WGS84")
 ID_CANDIDATES = ["seqnum", "SEQNUM", "global_id", "name", "id"]
 
@@ -319,18 +328,20 @@ def load_gee_counts():
     """All GEE count files -> one frame (seqnum + n_* bands). A cell may appear in several files
     only with identical values (it is then kept once); conflicting repeats stop the run."""
     files = gee_input_files()
-    n_cols = [c for c in gee_columns(files[0]) if c.startswith("n_")]
+    names0 = gee_columns(files[0])
+    gid = GEE_ID if GEE_ID in names0 else "seqnum"   # the published per-cell results use 'seqnum'
+    n_cols = [c for c in names0 if c.startswith("n_") and c in GEE_BANDS]
     parts = []
     for f in files:
-        d = (pd.read_parquet(f, columns=[GEE_ID] + n_cols) if f.suffix == ".parquet"
-             else pd.read_csv(f, usecols=[GEE_ID] + n_cols, dtype={GEE_ID: "string"}))
-        x = pd.to_numeric(d[GEE_ID]).to_numpy(dtype="float64")
-        assert np.isfinite(x).all() and (x == np.floor(x)).all(), f"{f.name}: non-integer {GEE_ID}"
-        d[GEE_ID] = x.astype("int64")
+        d = (pd.read_parquet(f, columns=[gid] + n_cols) if f.suffix == ".parquet"
+             else pd.read_csv(f, usecols=[gid] + n_cols, dtype={gid: "string"}))
+        x = pd.to_numeric(d[gid]).to_numpy(dtype="float64")
+        assert np.isfinite(x).all() and (x == np.floor(x)).all(), f"{f.name}: non-integer {gid}"
+        d[gid] = x.astype("int64")
         for c in n_cols:
             d[c] = pd.to_numeric(d[c]).astype("float64")
         parts.append(d)
-    gee = pd.concat(parts, ignore_index=True).rename(columns={GEE_ID: "seqnum"})
+    gee = pd.concat(parts, ignore_index=True).rename(columns={gid: "seqnum"})
     dup = gee["seqnum"].duplicated(keep=False)
     if dup.any():
         n_conf = int((gee.loc[dup].groupby("seqnum")[n_cols].nunique().max(axis=1) > 1).sum())
@@ -494,36 +505,57 @@ def summarize(final, iso3_to_name):
     return glob, country, int(T.cnt)
 
 
-# Per-cell CSV: columns not written (duplicates of other columns, constants or QA-only values),
-# decimals kept per column (finer than the data's resolution: 7 decimals of a degree ~ 1 cm,
-# of a km2 = 0.1 m2; one 10 m pixel is ~0.000085 of a cell's land, so 5 decimals resolve it).
-# Pixel counts are written as integers, flags as 1/0, missing values as empty fields.
-# popland / shland are computed from unrounded values.
-FINAL_DROP = ["land_pixel_km2", "habitat_pixel_km2", "land_baseline_km2", "habitat_baseline_km2",
-              "has_gee", "gee_geom_ok", "gee_count_ratio", "dist_deg"]
-FINAL_DECIMALS = {"longitude": 7, "latitude": 7, "cell_area_km2": 7, "land_area_km2": 7,
-                  "habitat_area_km2": 7, "habitat_frac": 5, "nonhabitat_frac": 5, "dist_km": 3,
-                  "pop_sum": 3, "pop_density": 3, "valid_px_cov": 3, "pop_density_land": 3}
-FINAL_FLAGS = ["wrapped", "popland", "shland"]
+# Published CSV tables (gzip, level 6). Decimals kept per column (finer than the data's
+# resolution: 7 decimals of a degree ~ 1 cm, of a km2 = 0.1 m2; one 10 m pixel is ~0.000085 of
+# a cell's land, so 5 decimals resolve it). Pixel counts are written as integers, flags as 1/0,
+# missing values as empty fields. popland / shland are computed from unrounded values.
+CENTROID_COUNTRY_COLS = ["seqnum", "longitude", "latitude", "gaul0_code", "gaul0_name", "iso3_code",
+                  "iso3_admin", "admin_source", "match_type", "dist_km", "wrapped"]
+CELL_COLS = ["seqnum", "longitude", "latitude", "gaul0_code", "gaul0_name", "iso3_code", "iso3_admin",
+             "n_total", "n_land", "n_freshwater", "n_ice", "n_crop", "n_built", "n_barren", "n_pasture",
+             "n_other_intensive_treecrop", "n_nonhabitat", "n_habitat", "cell_area_km2", "pop_sum",
+             "pop_density", "n_valid_pop_px", "land_area_km2", "habitat_area_km2", "nonhabitat_frac",
+             "habitat_frac", "pop_density_land", "popland", "shland"]
+CSV_RENAME = {"valid_px_cov": "n_valid_pop_px"}   # internal name -> published name
+CSV_DECIMALS = {"longitude": 7, "latitude": 7, "cell_area_km2": 7, "land_area_km2": 7,
+                "habitat_area_km2": 7, "habitat_frac": 5, "nonhabitat_frac": 5, "dist_km": 3,
+                "pop_sum": 3, "pop_density": 3, "n_valid_pop_px": 3, "pop_density_land": 3}
+CSV_FLAGS = ["wrapped", "popland", "shland"]
 CSV_CHUNK_ROWS = 2_000_000
 
 
-def write_cells_csv(final, path):
-    """Per-cell table -> gzip CSV (level 6), in chunks, in the frame's (seqnum) order."""
-    cols = [c for c in final.columns if c not in FINAL_DROP]
+def write_summary_zip(folder, path, names=("global_summary.csv", "country_summary.csv")):
+    """Summary CSVs -> one zip. Fixed timestamps, so the zip is byte-identical across runs."""
     path = Path(path)
+    tmp = path.with_name(f".{path.name}.tmp")
+    with zipfile.ZipFile(tmp, "w") as z:
+        for n in names:
+            info = zipfile.ZipInfo(n, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, (Path(folder) / n).read_bytes())
+    os.replace(tmp, path)
+
+
+def write_csv_gz(final, cols, path):
+    """Selected columns (published names; see CSV_RENAME) -> gzip CSV, in chunks, in frame order."""
+    src = {CSV_RENAME.get(c, c): c for c in final.columns}
+    missing = [c for c in cols if c not in src]
+    assert not missing, f"columns not in the per-cell table: {missing}"
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp")
     t0 = time.time()
     with gzip.open(tmp, "wt", compresslevel=6, newline="") as fh:
         for i, start in enumerate(range(0, len(final), CSV_CHUNK_ROWS)):
-            part = final.iloc[start:start + CSV_CHUNK_ROWS][cols].copy()
-            for c in [c for c in cols if c.startswith("n_")]:
+            part = final.iloc[start:start + CSV_CHUNK_ROWS][[src[c] for c in cols]].copy()
+            part.columns = cols
+            for c in [c for c in cols if c.startswith("n_") and c != "n_valid_pop_px"]:
                 v = pd.to_numeric(part[c])
                 assert np.all(np.isnan(v) | (v == np.round(v))), f"{c}: non-integer pixel counts"
                 part[c] = v.astype("Int64") if v.isna().any() else v.astype("int64")
-            for c in [c for c in FINAL_FLAGS if c in cols]:
+            for c in [c for c in CSV_FLAGS if c in cols]:
                 part[c] = part[c].astype("int8")
-            part = part.round({c: d for c, d in FINAL_DECIMALS.items() if c in cols})
+            part = part.round({c: d for c, d in CSV_DECIMALS.items() if c in cols})
             part.to_csv(fh, index=False, header=(i == 0))
     os.replace(tmp, path)
     print(f"Step 6: wrote {path} ({len(final):,} rows, {len(cols)} columns, "
@@ -576,9 +608,12 @@ def run_step6(iso3_to_name):
         stale.unlink()
     _write_csv(glob, SUMMARY_DIR / "global_summary.csv")
     _write_csv(country, SUMMARY_DIR / "country_summary.csv")
-    print(f"Step 6: wrote {SUMMARY_DIR}/global_summary.csv, country_summary.csv", flush=True)
+    write_summary_zip(SUMMARY_DIR, SUMMARY_ZIP)
+    print(f"Step 6: wrote {SUMMARY_DIR}/global_summary.csv, country_summary.csv and {SUMMARY_ZIP.name}",
+          flush=True)
 
-    write_cells_csv(final, FINAL)
+    write_csv_gz(final, CENTROID_COUNTRY_COLS, CENTROIDS_COUNTRY)
+    write_csv_gz(final, CELL_COLS, FINAL)
 
     # --- QA: groups must close on the global totals
     tl = float(glob["land_area_km2"].iloc[0])
@@ -644,7 +679,7 @@ def main():
     # --- GEE counts (used in step 6): fail early if absent or incomplete
     gee_files = gee_input_files()
     gee_cols = set(gee_columns(gee_files[0]))
-    missing_gee = [c for c in [GEE_ID] + GEE_REQUIRED if c not in gee_cols]
+    missing_gee = [c for c in GEE_REQUIRED if c not in gee_cols] + ([] if {GEE_ID, "seqnum"} & gee_cols else [GEE_ID])
     assert not missing_gee, f"GEE input lacks columns {missing_gee}; has {sorted(gee_cols)}"
     print(f"GEE input: {len(gee_files)} file(s) ({Path(GEE_INPUT).name})")
 

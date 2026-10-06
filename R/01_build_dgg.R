@@ -17,7 +17,7 @@
 #   <prefix>_<n|s>LL_<e|w>LLL.zip      zipped shapefile, 'seqnum' as STRING
 #                                        (9-digit ids overflow shapefile numbers)
 #   <prefix>_<n|s>LL_<e|w>LLL_pts.csv  cell centroids: seqnum, longitude, latitude
-#   <prefix>_manifest.csv              layers, cell counts, timings
+#   <prefix>_manifest.csv              build log: layers, land cell counts, timings
 #
 # Method notes
 #   - Land is read per tile (OSM from an R-tree-indexed GeoPackage built once),
