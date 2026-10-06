@@ -1,6 +1,6 @@
 # data and large outputs live on Zenodo / local disk, not in git
 data/*
-!data/README.md
+!data/DATA_README.md
 *.log
 __pycache__/
 .DS_Store
