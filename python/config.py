@@ -23,9 +23,12 @@ POP_YEAR = 2024
 WORLDPOP_DIR = DATA_DIR / "inputs" / "worldpop" / f"R2025A_100m_{POP_YEAR}"
 WORLDPOP = WORLDPOP_DIR / f"global_pop_{POP_YEAR}_CN_100m_R2025A_v1.vrt"   # 04_download_worldpop.py
 
-# GEE counts (gee/03_extract_counts.js). Either ONE table (CSV or Parquet) - the default - or a
-# FOLDER: then every file in it matching GEE_INPUT_PATTERN is read and combined.
-GEE_INPUT = DATA_DIR / "gee_counts" / "dgg_counts_2024.parquet"
+# GEE counts. gee/03_extract_counts.js exports one CSV per layer; put them in GEE_RAW_DIR and
+# 03b_combine_counts.py writes the single table GEE_INPUT (gzip CSV) read by 05_postprocess.py.
+# GEE_INPUT may also be a FOLDER: then every file in it matching GEE_INPUT_PATTERN is read directly.
+GEE_RAW_DIR = DATA_DIR / "gee_counts" / "raw"
+GEE_RAW_PATTERN = "dgg_counts_*.csv"
+GEE_INPUT = DATA_DIR / "gee_counts" / "dgg_counts_2024.csv.gz"
 GEE_INPUT_PATTERN = "dgg_counts_*.csv"     # used only when GEE_INPUT is a folder
 
 # --- Study domain ---------------------------------------------------------------------------
@@ -47,9 +50,9 @@ NODATA_AS_ZERO = True
 
 # --- Landscape classification ---------------------------------------------------------------
 LAND_AREA_METHOD = "pixel"   # "pixel": n_land x 10 m pixel area | "baseline": 1.18491 x n_land/n_total
-NONHABITAT_THRESHOLD = 0.01            # Populated Landscape: non-habitat share > 1% of land ...
+NONHABITAT_THRESHOLD = 0.01            # Populated Landscape: non-habitat fraction > 0.01 of land ...
 POPULATION_DENSITY_THRESHOLD = 1.0     # ... and >= 1 person per km2 of land
-SHL_HABITAT_THRESHOLD = 0.20           # Shared Landscape: Populated + habitat share >= 20%
+SHL_HABITAT_THRESHOLD = 0.20           # Shared Landscape: Populated + habitat fraction >= 0.20
 POP_DENSITY_BASIS = "land"             # "land": people / land area | "cell": people / cell area
 N_HEX_RULE = "n_land>0"                # cells counted in n_hex: "n_land>0" | "n_total>0" | "all"
 

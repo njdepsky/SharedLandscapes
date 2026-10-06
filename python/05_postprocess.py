@@ -18,10 +18,10 @@ Classification
       at the cell centroid latitude); habitat_area_km2 likewise with n_habitat.
       ("baseline": 1.18491 km2 x n_land / n_total - ocean pixels are not counted in n_total,
       so coastal cells are credited with nearly a full cell; kept for comparison.)
-  habitat_share = habitat area / land area of the cell (= n_habitat / n_land).
-  Populated Landscape (popland): n_land > 0, non-habitat share > 1% of land, and population
+  habitat_frac = habitat area / land area of the cell (= n_habitat / n_land).
+  Populated Landscape (popland): n_land > 0, non-habitat fraction > 0.01 of land, and population
       density >= 1 person per km2 of land.
-  Shared Landscape (shland): Populated Landscape with habitat share >= 20% of land.
+  Shared Landscape (shland): Populated Landscape with habitat fraction >= 0.20 of land.
 
 Inputs (paths in config.py): DGG layers (R/01_build_dgg.R), GEE counts (gee/03_extract_counts.js;
 one table, or every file matching a pattern in a folder), GAUL 2024 L0, Natural Earth 10m Admin 0,
@@ -30,7 +30,8 @@ WorldPop VRT (04_download_worldpop.py).
 Outputs (config.OUT_DIR)
   dgg_cells_country_population.parquet   one row per domain cell: country fields, cell area,
                                          population (pop_sum, pop_density)
-  dgg_cells_shared_landscapes.parquet    + GEE counts, land / habitat areas and shares, popland, shland
+  dgg_cells_shared_landscapes.csv.gz     + GEE counts, land / habitat areas and fractions, popland, shland
+                                         (gzip CSV; see write_cells_csv for columns and precision)
   summaries/global_summary.csv, country_summary.csv
 
 Run from the repository root, in a terminal (worker processes cannot import a notebook):
@@ -41,6 +42,7 @@ import os
 
 os.environ.setdefault("GDAL_CACHEMAX", "1024")  # MB per process; set before GDAL initialises
 
+import gzip
 import json
 import multiprocessing as mp
 import re
@@ -93,7 +95,7 @@ STEP1_INC = WORKDIR / "step1_country_join_increments"
 STEP2 = WORKDIR / "step2_nearest_country.parquet"
 ZONALDIR = WORKDIR / f"zonal_population_{Path(WORLDPOP).stem}"   # one parquet per DGG layer
 OUT = OUT_DIR / "dgg_cells_country_population.parquet"
-FINAL = OUT_DIR / "dgg_cells_shared_landscapes.parquet"
+FINAL = OUT_DIR / "dgg_cells_shared_landscapes.csv.gz"
 SUMMARY_DIR = OUT_DIR / "summaries"
 
 HEX_AREA_KM2 = 1.18491  # nominal ISEA3H resolution-16 cell area (baseline land method)
@@ -342,11 +344,11 @@ def load_gee_counts():
 # STEP 6 - GEE JOIN, LANDSCAPE CLASSIFICATION, SUMMARY TABLES
 # =============================================================================
 SUMMARY_COLS = [
-    "land_area_km2", "populated_land_area_km2",
-    "total_habitat_area_km2", "habitat_in_populated_area_km2",
-    "shl_land_area_km2", "shl_habitat_area_km2", "n_hex",
-    "share_land_populated", "share_habitat_in_populated",
-    "share_shl_land", "share_shl_within_populated",
+    "land_area_km2", "popland_area_km2",
+    "total_habitat_area_km2", "habitat_in_popland_area_km2",
+    "shland_area_km2", "shland_habitat_area_km2", "n_hex",
+    "frac_land_popland", "frac_habitat_in_popland",
+    "frac_shland", "frac_shland_in_popland", "frac_population_in_shland",
 ]
 OUT_STR_COLS = ["gaul0_name", "iso3_code", "iso3_admin", "admin_source", "continent", "match_type"]
 
@@ -411,8 +413,8 @@ def classify(df):
         shland = popland & (hab_cover >= SHL_HABITAT_THRESHOLD)
     df["land_area_km2"] = land
     df["habitat_area_km2"] = habitat
-    df["nonhabitat_share"] = nonhab_cover   # non-habitat share of the cell's land
-    df["habitat_share"] = hab_cover         # habitat share of the cell's land (= habitat / land area)
+    df["nonhabitat_frac"] = nonhab_cover    # non-habitat fraction of the cell's land
+    df["habitat_frac"] = hab_cover          # habitat fraction of the cell's land (= habitat / land area)
     df["pop_density_land"] = dens
     df["popland"] = popland
     df["shland"] = shland
@@ -421,19 +423,20 @@ def classify(df):
 
 
 def _finish(g):
-    """Aggregated sums (land, habitat, p_land, p_hab, s_land, s_hab, n_hex) -> summary columns."""
+    """Aggregated sums (land, habitat, p_land, p_hab, s_land, s_hab, pop, s_pop, n_hex) -> summary columns."""
     r = pd.DataFrame(index=g.index)
     r["land_area_km2"] = g["land"]
-    r["populated_land_area_km2"] = g["p_land"]
+    r["popland_area_km2"] = g["p_land"]
     r["total_habitat_area_km2"] = g["habitat"]
-    r["habitat_in_populated_area_km2"] = g["p_hab"]
-    r["shl_land_area_km2"] = g["s_land"]
-    r["shl_habitat_area_km2"] = g["s_hab"]
+    r["habitat_in_popland_area_km2"] = g["p_hab"]
+    r["shland_area_km2"] = g["s_land"]
+    r["shland_habitat_area_km2"] = g["s_hab"]
     r["n_hex"] = g["n_hex"].astype("int64")
-    r["share_land_populated"] = _div(r["populated_land_area_km2"], r["land_area_km2"])
-    r["share_habitat_in_populated"] = _div(r["habitat_in_populated_area_km2"], r["total_habitat_area_km2"])
-    r["share_shl_land"] = _div(r["shl_land_area_km2"], r["land_area_km2"])
-    r["share_shl_within_populated"] = _div(r["shl_land_area_km2"], r["populated_land_area_km2"])
+    r["frac_land_popland"] = _div(r["popland_area_km2"], r["land_area_km2"])
+    r["frac_habitat_in_popland"] = _div(r["habitat_in_popland_area_km2"], r["total_habitat_area_km2"])
+    r["frac_shland"] = _div(r["shland_area_km2"], r["land_area_km2"])
+    r["frac_shland_in_popland"] = _div(r["shland_area_km2"], r["popland_area_km2"])
+    r["frac_population_in_shland"] = _div(g["s_pop"], g["pop"])
     return r
 
 
@@ -450,6 +453,7 @@ def summarize(final, iso3_to_name):
     hab = np.nan_to_num(_num(final["habitat_area_km2"]))[has]
     p = final["popland"].to_numpy(bool)[has]
     s = final["shland"].to_numpy(bool)[has]
+    pop = np.nan_to_num(_num(final["pop_sum"]))[has]   # cells outside the WorldPop extent count as 0
     if N_HEX_RULE == "all":
         cnt = np.ones(int(has.sum()), dtype="int64")
     elif N_HEX_RULE in ("n_land>0", "n_total>0"):
@@ -458,8 +462,9 @@ def summarize(final, iso3_to_name):
     else:
         raise ValueError(f"N_HEX_RULE must be 'n_land>0', 'n_total>0' or 'all', not {N_HEX_RULE!r}")
     base = pd.DataFrame({"land": land, "habitat": hab, "p_land": land * p, "p_hab": hab * p,
-                         "s_land": land * s, "s_hab": hab * s, "cnt": cnt})
-    aggs = {c: (c, "sum") for c in ["land", "habitat", "p_land", "p_hab", "s_land", "s_hab"]}
+                         "s_land": land * s, "s_hab": hab * s, "pop": pop, "s_pop": pop * s, "cnt": cnt})
+    sums = ["land", "habitat", "p_land", "p_hab", "s_land", "s_hab", "pop", "s_pop"]
+    aggs = {c: (c, "sum") for c in sums}
     aggs["n_hex"] = ("cnt", "sum")
 
     def by(col):
@@ -470,16 +475,11 @@ def summarize(final, iso3_to_name):
         base.drop(columns="_k", inplace=True)
         return g
 
-    # --- global
-    T = base[["land", "habitat", "p_land", "p_hab", "s_land", "s_hab", "cnt"]].sum()
-    glob = pd.DataFrame([
-        ("Total land area", T.land, 1.0),
-        ("Populated Landscapes", T.p_land, _div(T.p_land, T.land).item()),
-        ("Total habitat area", T.habitat, _div(T.habitat, T.land).item()),
-        ("Habitat in Populated Landscapes", T.p_hab, _div(T.p_hab, T.habitat).item()),
-        ("Shared Landscapes (SHL)", T.s_land, _div(T.s_land, T.land).item()),
-        ("SHL within Populated Landscapes", T.s_land, _div(T.s_land, T.p_land).item()),
-    ], columns=["metric", "area_km2", "share"])
+    # --- global: one row, same columns as the country table
+    T = base[sums + ["cnt"]].sum()
+    glob = _finish(pd.DataFrame([{**{c: T[c] for c in sums}, "n_hex": T["cnt"]}]))
+    glob.insert(0, "group", "Global")
+    glob = glob[["group"] + SUMMARY_COLS]
 
     # --- country
     g = by(GROUP_ISO3)
@@ -492,6 +492,42 @@ def summarize(final, iso3_to_name):
     country = country.sort_values(["land_area_km2", "iso3"], ascending=[False, True],
                                   kind="mergesort")[["group", "iso3"] + SUMMARY_COLS]
     return glob, country, int(T.cnt)
+
+
+# Per-cell CSV: columns not written (duplicates of other columns, constants or QA-only values),
+# decimals kept per column (finer than the data's resolution: 7 decimals of a degree ~ 1 cm,
+# of a km2 = 0.1 m2; one 10 m pixel is ~0.000085 of a cell's land, so 5 decimals resolve it).
+# Pixel counts are written as integers, flags as 1/0, missing values as empty fields.
+# popland / shland are computed from unrounded values.
+FINAL_DROP = ["land_pixel_km2", "habitat_pixel_km2", "land_baseline_km2", "habitat_baseline_km2",
+              "has_gee", "gee_geom_ok", "gee_count_ratio", "dist_deg"]
+FINAL_DECIMALS = {"longitude": 7, "latitude": 7, "cell_area_km2": 7, "land_area_km2": 7,
+                  "habitat_area_km2": 7, "habitat_frac": 5, "nonhabitat_frac": 5, "dist_km": 3,
+                  "pop_sum": 3, "pop_density": 3, "valid_px_cov": 3, "pop_density_land": 3}
+FINAL_FLAGS = ["wrapped", "popland", "shland"]
+CSV_CHUNK_ROWS = 2_000_000
+
+
+def write_cells_csv(final, path):
+    """Per-cell table -> gzip CSV (level 6), in chunks, in the frame's (seqnum) order."""
+    cols = [c for c in final.columns if c not in FINAL_DROP]
+    path = Path(path)
+    tmp = path.with_name(f".{path.name}.tmp")
+    t0 = time.time()
+    with gzip.open(tmp, "wt", compresslevel=6, newline="") as fh:
+        for i, start in enumerate(range(0, len(final), CSV_CHUNK_ROWS)):
+            part = final.iloc[start:start + CSV_CHUNK_ROWS][cols].copy()
+            for c in [c for c in cols if c.startswith("n_")]:
+                v = pd.to_numeric(part[c])
+                assert np.all(np.isnan(v) | (v == np.round(v))), f"{c}: non-integer pixel counts"
+                part[c] = v.astype("Int64") if v.isna().any() else v.astype("int64")
+            for c in [c for c in FINAL_FLAGS if c in cols]:
+                part[c] = part[c].astype("int8")
+            part = part.round({c: d for c, d in FINAL_DECIMALS.items() if c in cols})
+            part.to_csv(fh, index=False, header=(i == 0))
+    os.replace(tmp, path)
+    print(f"Step 6: wrote {path} ({len(final):,} rows, {len(cols)} columns, "
+          f"{path.stat().st_size / 1e9:.2f} GB, {(time.time() - t0) / 60:.1f} min)", flush=True)
 
 
 def run_step6(iso3_to_name):
@@ -533,21 +569,19 @@ def run_step6(iso3_to_name):
           f"{np.nansum(_num(final['land_baseline_km2'])[bad]):,.1f} km2 (their counts are invalid; "
           f"pixel method falls back to baseline there)", flush=True)
 
-    tmp = FINAL.with_name(f".{FINAL.name}.tmp")
-    final.to_parquet(tmp, index=False, row_group_size=2_000_000)
-    os.replace(tmp, FINAL)
-    print(f"Step 6: wrote {FINAL} ({len(final):,} rows)", flush=True)
-
-    glob, country, n_hex_total = summarize(final, iso3_to_name)
+    glob, country, n_hex_total = summarize(final, iso3_to_name)   # from unrounded values
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     stale = SUMMARY_DIR / "region_summary.csv"   # no longer produced
     if stale.exists():
         stale.unlink()
     _write_csv(glob, SUMMARY_DIR / "global_summary.csv")
     _write_csv(country, SUMMARY_DIR / "country_summary.csv")
+    print(f"Step 6: wrote {SUMMARY_DIR}/global_summary.csv, country_summary.csv", flush=True)
+
+    write_cells_csv(final, FINAL)
 
     # --- QA: groups must close on the global totals
-    tl = float(glob.loc[glob.metric == "Total land area", "area_km2"].iloc[0])
+    tl = float(glob["land_area_km2"].iloc[0])
     print(f"\nStep 6 QA: land total {tl:,.4f} km2 | country sum {country.land_area_km2.sum():,.4f} | "
           f"n_hex ({N_HEX_RULE}) global {n_hex_total:,} | country {int(country.n_hex.sum()):,}")
     ua = country[country.iso3 == "--"]

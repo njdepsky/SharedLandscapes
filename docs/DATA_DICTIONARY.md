@@ -5,20 +5,19 @@ Study domain of the counts and results: cells whose centroid latitude ≥ 60°S 
 
 ## Grid
 
-### `dgg_isea3h16_land_v4_shapefiles_partNNofMM.zip`
+### `dgg_isea3h16_land_v4_shapefiles.zip`
 
-Parts of ~1 GB, each holding whole layers; together 474 zipped shapefiles, one per layer: `dgg_isea3h16_land_<n|s>LL_<e|w>LLL.zip` (10° × 10° tile
-named by its south-west corner) and `dgg_isea3h16_land_south_cap.zip`. Each cell belongs to the
-layer containing its centroid; together the layers hold every cell exactly once (126,509,398).
+474 zipped shapefiles, one per layer: `dgg_isea3h16_land_<n|s>LL_<e|w>LLL.zip` (10° × 10° tile
+named by its south-west corner) and `dgg_isea3h16_land_south_cap.zip`. n = 126,509,398.
 
 | Field | Type | Description |
 |---|---|---|
 | `seqnum` | text | cell id (DGGRID sequence number), stored as text because 9-digit integers overflow shapefile numeric fields |
 | geometry | polygon / multipolygon | cell boundary; cells crossing ±180° are split into east and west parts |
 
-### `dgg_isea3h16_land_v4_centroids_partNNofMM.zip`
+### `dgg_isea3h16_land_v4_centroids.zip`
 
-Parts of ~1 GB, each holding whole files; together 474 CSV files, `<layer>_pts.csv`, one row per cell.
+474 CSV files, `<layer>_pts.csv`, one row per cell.
 
 | Column | Type | Description |
 |---|---|---|
@@ -31,12 +30,12 @@ Parts of ~1 GB, each holding whole files; together 474 CSV files, `<layer>_pts.c
 |---|---|
 | `layer` | layer name |
 | `lat0`, `lon0` | south-west corner of the tile (degrees) |
-| `n_cells` | cells in the layer |
+| `n_land_cells` | land cells in the layer (cells of the global all-land grid whose centroid lies in the tile) |
 | `seconds` | build time of the layer |
 
-## `dgg_counts_2024.parquet` — Earth Engine pixel counts
+## `dgg_counts_2024.csv.gz` — Earth Engine pixel counts
 
-One row per domain cell. Counts are numbers of 10 m pixels (EPSG:4326, 10 m scale) whose centres
+Gzip CSV, one row per domain cell, sorted by `seqnum16`; all values integers. Counts are numbers of 10 m pixels (EPSG:4326, 10 m scale) whose centres
 fall inside the cell; definitions in `docs/METHODS.md`.
 
 | Column | Description |
@@ -52,12 +51,15 @@ fall inside the cell; definitions in `docs/METHODS.md`.
 | `n_nonhabitat` | land pixels that are crop, built-up, pasture or tree crop |
 | `n_habitat` | `n_land − n_nonhabitat` |
 
-## `dgg_cells_shared_landscapes_partNNofMM.parquet` — per-cell results
+## `dgg_cells_shared_landscapes.csv.gz` — per-cell results
 
-One row per domain cell (114,791,301), split into parts of ~10 million consecutive rows ordered
-by `seqnum` (read all parts together); 42 columns. Storage types: `seqnum`, `gaul0_code` int64;
-text fields strings; `wrapped`, `popland`, `shland`, `has_gee`, `gee_geom_ok`
-boolean; all other columns float64 (pixel counts are whole numbers stored as float64).
+Gzip CSV, one row per domain cell (114,791,301), sorted by `seqnum`; 34 columns. Empty fields are
+missing values. Pixel counts and `gaul0_code` are integers; `wrapped`, `popland` and `shland` are
+1 (true) or 0 (false). Decimals written: 7 for coordinates and areas (about 1 cm and 0.1 m²),
+5 for fractions (one 10 m pixel is ~0.000085 of a cell's land), 3 for distances, population and
+densities. `popland` and `shland` were computed from the unrounded values, so a cell whose
+fraction lies within 0.000005 of a threshold may appear to contradict its flag. Very small
+values may be written in scientific notation (e.g. `8.5e-05`).
 
 **Location and country**
 
@@ -70,7 +72,7 @@ boolean; all other columns float64 (pixel counts are whole numbers stored as flo
 | `admin_source` | how `iso3_admin` was set: `gaul` (GAUL code as published), `crosswalk` (disputed GAUL feature, de facto administrator), `naturalearth` (Jammu & Kashmir / India–China border areas, per cell from Natural Earth), `naturalearth_remote` (> 50 km from GAUL, from Natural Earth), `unassigned` (Abyei, Bir Tawil, Spratly Islands), `beyond_max_dist` (> 50 km from GAUL and not in Natural Earth) |
 | `continent` | continent from GAUL |
 | `match_type` | `intersects` (centroid inside a GAUL polygon), `nearest` (nearest GAUL polygon), `ne_remote` (Natural Earth, remote islands) |
-| `dist_deg`, `dist_km` | distance from the centroid to the matched polygon for `nearest` / `ne_remote` matches (degrees; geodesic km) |
+| `dist_km` | geodesic distance from the centroid to the matched polygon for `nearest` / `ne_remote` matches (km) |
 | `cell_area_km2` | cell area (equal-area projection EPSG:6933) |
 | `wrapped` | cell crosses the antimeridian (stored as east/west parts) |
 
@@ -82,7 +84,7 @@ boolean; all other columns float64 (pixel counts are whole numbers stored as flo
 | `pop_density` | `pop_sum / cell_area_km2` |
 | `valid_px_cov` | number of populated 100 m pixels covering the cell (coverage-weighted) |
 
-**Earth Engine counts:** the `n_*` columns of `dgg_counts_2024.parquet` (above).
+**Earth Engine counts:** the `n_*` columns of `dgg_counts_2024.csv.gz` (above).
 
 **Areas and classification**
 
@@ -90,36 +92,29 @@ boolean; all other columns float64 (pixel counts are whole numbers stored as flo
 |---|---|
 | `land_area_km2` | land area: `n_land` × area of one 10 m pixel at the cell's latitude (WGS84 ellipsoid) |
 | `habitat_area_km2` | habitat area, likewise from `n_habitat` |
-| `land_pixel_km2`, `habitat_pixel_km2` | as above (pixel method; identical to `land_area_km2`, `habitat_area_km2`) |
-| `land_baseline_km2`, `habitat_baseline_km2` | alternative cell-fraction areas, 1.18491 × `n_land` / `n_total` (resp. `n_habitat`); for comparison only |
-| `nonhabitat_share` | non-habitat share of the cell's land, `n_nonhabitat / n_land` |
-| `habitat_share` | habitat share of the cell's land, `n_habitat / n_land` (= `habitat_area_km2 / land_area_km2`) |
+| `nonhabitat_frac` | non-habitat fraction of the cell's land, `n_nonhabitat / n_land` (fraction, 0-1) |
+| `habitat_frac` | habitat fraction of the cell's land, `n_habitat / n_land` (= `habitat_area_km2 / land_area_km2`; fraction, 0-1) |
 | `pop_density_land` | persons per km² of land, `pop_sum / land_area_km2` (used for the classification) |
-| `popland` | Populated Landscape: `n_land` > 0, `nonhabitat_share` > 0.01 and `pop_density_land` ≥ 1 |
-| `shland` | Shared Landscape: `popland` and `habitat_share` ≥ 0.20 |
-| `has_gee` | Earth Engine counts present (true for every domain cell) |
-| `gee_count_ratio` | QA: `n_total` × pixel area / `cell_area_km2` (≈ 1 for fully valid cells) |
-| `gee_geom_ok` | QA: `gee_count_ratio` ≤ 1.02 (true for every cell) |
+| `popland` | Populated Landscape: `n_land` > 0, `nonhabitat_frac` > 0.01 and `pop_density_land` ≥ 1 |
+| `shland` | Shared Landscape: `popland` and `habitat_frac` ≥ 0.20 |
 
 ## Summary tables
 
-`global_summary.csv`: `metric`, `area_km2`, `share` — total land; Populated Landscapes; total
-habitat; habitat in Populated Landscapes; Shared Landscapes; Shared Landscapes within Populated
-Landscapes. `share` is relative to total land, except for habitat in Populated Landscapes
-(relative to total habitat) and Shared within Populated (relative to Populated Landscapes).
-
-`country_summary.csv` (by de facto country: `group` = name, `iso3`; `--` = unassigned):
+`global_summary.csv` (one row, `group` = `Global`) and `country_summary.csv` (one row per de facto
+country: `group` = name, `iso3`; `--` = unassigned) have these columns. Population fractions use
+all cells with centroid latitude ≥ 60°S (WorldPop R2025A, 2024); fractions are rounded to 4 decimals.
 
 | Column | Description |
 |---|---|
-| `land_area_km2` | land |
-| `populated_land_area_km2` | land in Populated Landscapes |
-| `total_habitat_area_km2` | habitat |
-| `habitat_in_populated_area_km2` | habitat in Populated Landscapes |
-| `shl_land_area_km2` | land in Shared Landscapes |
-| `shl_habitat_area_km2` | habitat in Shared Landscapes |
+| `land_area_km2` | land (area, km2)|
+| `popland_area_km2` | land in Populated Landscapes (area, km2)|
+| `total_habitat_area_km2` | habitat (area, km2)|
+| `habitat_in_popland_area_km2` | habitat in Populated Landscapes (area, km2)|
+| `shland_area_km2` | land in Shared Landscapes (area, km2)|
+| `shland_habitat_area_km2` | habitat in Shared Landscapes (area, km2)|
 | `n_hex` | cells with land (`n_land` > 0) |
-| `share_land_populated` | Populated Landscape share of land |
-| `share_habitat_in_populated` | share of habitat in Populated Landscapes |
-| `share_shl_land` | Shared Landscape share of land |
-| `share_shl_within_populated` | Shared Landscape share of Populated Landscapes |
+| `frac_land_popland` | fraction of land that is Populated Landscapes (fraction, 0-1)|
+| `frac_habitat_in_popland` | fraction of habitat in Populated Landscapes (fraction, 0-1)|
+| `frac_shland` | fraction of land that is Shared Landscapes (fraction, 0-1)|
+| `frac_shland_in_popland` | fraction of Populated Landscapes that is Shared Landscapes (fraction, 0-1)|
+| `frac_population_in_shland` | fraction of total population residing in Shared Landscapes (fraction, 0-1)|

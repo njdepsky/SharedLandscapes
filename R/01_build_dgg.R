@@ -875,18 +875,19 @@ export_global_land <- function(dggs, out_dir, land_shp = LAND_SHP,
 
   manifest <- data.frame(
     layer = character(), lat0 = numeric(), lon0 = numeric(),
-    n_cells = integer(), seconds = numeric(),
+    n_land_cells = integer(), seconds = numeric(),
     stringsAsFactors = FALSE
   )
   if (file.exists(manifest_path)) {
     manifest <- utils::read.csv(manifest_path, stringsAsFactors = FALSE)
+    names(manifest)[names(manifest) == "n_cells"] <- "n_land_cells"   # manifests from older builds
     cat(sprintf("Resuming: %d layers already done\n", nrow(manifest)))
   }
 
   record <- function(manifest, layer, lat0, lon0, n_cells, seconds) {
     manifest <- rbind(manifest, data.frame(
       layer = layer, lat0 = lat0, lon0 = lon0,
-      n_cells = n_cells, seconds = round(seconds, 1),
+      n_land_cells = n_cells, seconds = round(seconds, 1),
       stringsAsFactors = FALSE
     ))
     utils::write.csv(manifest, manifest_path, row.names = FALSE)
@@ -945,12 +946,12 @@ export_global_land <- function(dggs, out_dir, land_shp = LAND_SHP,
       manifest <- record(manifest, layer, lat0, lon0, nrow(grid), elapsed)
 
       cat(sprintf("  running total: %s cells, %.1f min elapsed\n",
-                  format(sum(manifest$n_cells), big.mark = ","),
+                  format(sum(manifest$n_land_cells), big.mark = ","),
                   as.numeric(difftime(Sys.time(), started, units = "mins"))))
     }
   }
 
-  total_cells <- sum(manifest$n_cells)
+  total_cells <- sum(manifest$n_land_cells)
   cat(sprintf("\nLayers written     : %d\n", nrow(manifest)))
   cat(sprintf("Land cells total   : %s\n", format(total_cells, big.mark = ",")))
   cat(sprintf("Share of globe     : %.2f%%\n",

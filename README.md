@@ -21,7 +21,7 @@ results and summary tables (see [Data on Zenodo](#data-on-zenodo)).
 | 0 | `R/00_install_packages.R` | R | R packages |
 | 1 | `R/01_build_dgg.R` | R (~5 h) | `data/dgg/` — global land DGG, one layer per 10° tile |
 | 2 | `R/02_validate_dgg.R` | R (minutes) | validation report (checks 0–7) |
-| 3 | `gee/03_extract_counts.js` | Earth Engine batch (377 export tasks; ~1.1 million EECU-hours) | pixel-count CSVs per layer (Google Drive) |
+| 3 | `gee/03_extract_counts.js`, `python/03b_combine_counts.py` | Earth Engine batch (377 export tasks; ~1.1 million EECU-hours); Python | pixel-count CSVs per layer, combined into `data/gee_counts/dgg_counts_2024.csv.gz` |
 | 4 | `python/00_prepare_gaul_l0.py`, `python/04_download_worldpop.py` | Python | GAUL 2024 level 0 GeoPackage; WorldPop 100 m country rasters + global VRT |
 | 5 | `python/05_postprocess.py` | Python (~4–5 h first run; cached afterwards) | per-cell tables + summaries in `data/outputs/` |
 
@@ -88,11 +88,15 @@ domain (centroid latitude ≥ 60°S) is applied in steps 3 and 5.
    `R/01_build_dgg.R`).
 2. Set `ASSET_FOLDER` ([PLACEHOLDER] in `gee/03_extract_counts.js`), run it, and start the export tasks. Process
    the layer list in slices (`FIRST_LAYER`, `N_LAYERS`) and confirm every task completed.
-3. Download all CSVs from the Drive folder into `data/gee_counts/`.
+3. Download all CSVs from the Drive folder into `data/gee_counts/raw/`, then combine them:
 
-`python/config.py` reads the counts either from **one table** (default:
-`data/gee_counts/dgg_counts_2024.parquet`) or from **every file matching a pattern in a
-folder** — set `GEE_INPUT = DATA_DIR / "gee_counts"` and `GEE_INPUT_PATTERN = "dgg_counts_*.csv"`.
+```bash
+python -u python/03b_combine_counts.py
+```
+
+This writes `data/gee_counts/dgg_counts_2024.csv.gz` (one row per cell, integer counts), the table
+read by step 5. Alternatively, set `GEE_INPUT` in `python/config.py` to a folder to read every
+file matching `GEE_INPUT_PATTERN` directly.
 
 ### 4–5. Population, countries, classification
 
@@ -111,9 +115,11 @@ It must run from a terminal (it starts worker processes), not a notebook.
 
 - `dgg_cells_country_population.parquet` — one row per domain cell: centroid, GAUL fields,
   de facto `iso3_admin`, assignment source, cell area, population (`pop_sum`, `pop_density`).
-- `dgg_cells_shared_landscapes.parquet` — the above plus GEE counts, `land_area_km2`,
-  `habitat_area_km2`, `habitat_share`, `popland` (Populated Landscape), `shland` (Shared Landscape).
-- `summaries/global_summary.csv`, `country_summary.csv`.
+- `dgg_cells_shared_landscapes.csv.gz` — gzip CSV, one row per domain cell (34 columns):
+  location, country, population, GEE counts, `land_area_km2`, `habitat_area_km2`, `habitat_frac`,
+  `popland` (Populated Landscape), `shland` (Shared Landscape).
+- `summaries/global_summary.csv` (one row) and `country_summary.csv`: areas, fractions and the
+  fraction of population in Shared Landscapes, with the same columns.
 
 Reference run (OSM 2026-09-30, Dynamic World 2024, WorldPop 2024): 114,791,301 domain cells;
 land 127.61 million km²; Populated Landscapes 26.14 million km² (20.5% of land); Shared
@@ -127,16 +133,13 @@ See [`docs/METHODS.md`](docs/METHODS.md).
 
 | File | Content |
 |---|---|
-| `dgg_isea3h16_land_v4_shapefiles_partNNofMM.zip` | global land DGG: 474 zipped layer shapefiles (`seqnum` as text), 126,509,398 cells, grouped into ~1 GB parts |
-| `dgg_isea3h16_land_v4_centroids_partNNofMM.zip` | cell centroids per layer (`seqnum`, `longitude`, `latitude`), grouped into ~1 GB parts |
-| `dgg_isea3h16_land_manifest.csv` | layers, cell counts |
-| `dgg_counts_2024.parquet` | Earth Engine pixel counts for the 114,791,301 cells with centroid latitude ≥ 60°S (input of step 5) |
-| `dgg_cells_shared_landscapes_partNNofMM.parquet` | per-cell results: country, population, counts, land and habitat areas, landscape classes; ~10 million rows per part, ordered by `seqnum` |
+| `dgg_isea3h16_land_v4_shapefiles.zip` | global land DGG: 474 zipped layer shapefiles (`seqnum` as text), 126,509,398 cells |
+| `dgg_isea3h16_land_v4_centroids.zip` | cell centroids per layer (`seqnum`, `longitude`, `latitude`) |
+| `dgg_isea3h16_land_manifest.csv` | layers, land cells per layer |
+| `dgg_counts_2024.csv.gz` | Earth Engine pixel counts for the 114,791,301 cells with centroid latitude ≥ 60°S (input of step 5) |
+| `dgg_cells_shared_landscapes.csv.gz` | per-cell results: location, country, population, counts, land and habitat areas, landscape classes |
 | `global_summary.csv`, `country_summary.csv` | summary tables |
 | `DATA_DICTIONARY.md` | column definitions for all files (also in [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md)) |
-
-Every part is self-contained: unzip the parts into one folder to obtain all layers, and read all
-parquet parts together, e.g. `pd.read_parquet(sorted(glob.glob("dgg_cells_shared_landscapes_part*.parquet")))`.
 
 WorldPop, GAUL, Natural Earth and OSM inputs are not redistributed; download them from their
 sources above.
@@ -151,7 +154,7 @@ providers).
 
 **Code**: [MIT License](LICENSE).
 
-**Citation**: Depsky, N., Ellis, E.C., Abrams, J.F., Dong, J., Yu, L., Di, Y., Lyu, B., Du, Z.,
+**Citation**: Ellis, E.C., Depsky, N., Abrams, J.F., Dong, J., Yu, L., Di, Y., Lyu, B., Du, Z.,
 Verburg, P., Tapia, H. A global dataset of potential habitat areas in populated landscapes.
 *Data in Brief* (2026). [PLACEHOLDER: article DOI, pending]. Data: Zenodo, [doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754).
 Machine-readable metadata: [`CITATION.cff`](CITATION.cff).

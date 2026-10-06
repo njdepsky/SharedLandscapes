@@ -43,10 +43,11 @@ constrained product) contribute zero. The cells capture 100.00% of the raster's 
 
 ## Classification
 
-Each cell's habitat share is its habitat area divided by its land area. A cell is a
+Each cell's habitat fraction is its habitat area divided by its land area. A cell is a
 **Populated Landscape** if it contains land, more than 1% of its land is non-habitat, and its
 population density is at least 1 person per km² of land. A Populated Landscape is a **Shared
-Landscape** if at least 20% of its land is habitat. Areas are summed by country and globally
+Landscape** if at least 20% of its land is habitat. Areas are summed by country and globally, together with
+the fraction of the population (WorldPop cell sums) living in Shared Landscapes
 [land 127.61 million km²; Populated 26.14 million km² (20.5%); Shared 18.87 million km² (14.8%
 of land; 72.2% of Populated Landscapes)]. Cell counts (n_hex) include
 cells with land only.
