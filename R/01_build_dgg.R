@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# 01_build_dgg.R - global all-land discrete global grid (DGG)
+# 01_build_dgg.R - all-land discrete global grid (DGG) within a bounding box
 #
 # ISEA3H resolution 16 (DGGRID via dggridR): hexagonal cells of 1.18491 km2,
 # 430,467,212 cells on Earth. A cell is "land" (exported) if it touches
@@ -7,10 +7,11 @@
 #     union(Natural Earth 10m land, OSM land polygons), buffered outward by
 #     MEMBERSHIP_BUFFER_KM (default 200 m)
 #
-# The result is a GLOBAL layer (Antarctica included) that can be used for any
-# application; study domains (here: centroid latitude >= -60) are applied
-# downstream. Reference build (OSM snapshot 2026-09-30): 474 layers,
-# 126,509,398 cells.
+# Only cells whose CENTROID lies inside BBOX are exported. This analysis uses
+# 60S-90N, all longitudes; for a global grid set
+# BBOX <- c(xmin = -180, ymin = -90, xmax = 180, ymax = 90).
+# Reference build (OSM snapshot 2026-09-30, BBOX 60S-90N): 377 layers,
+# 114,791,301 cells.
 #
 # Output (OUT_DIR), one layer per 10 x 10 degree tile plus two polar caps,
 # each cell owned by the tile that contains its centroid:
@@ -94,11 +95,13 @@ OSM_LAYER    <- "land_polygons"
 # tile's mid-latitude, within about +/-20% across most 10-degree tiles).
 MEMBERSHIP_BUFFER_KM <- 0.2
 
-# Southern limit of the EXPORT. Default -90: the layer is a portable, global all-land DGG.
-# Tiles are owned by centroid, so a higher value (e.g. -60) skips every tile with lat0 < MIN_LAT
-# and the south polar cap. Study domains are applied downstream instead (the GEE extraction
-# and post-processing use cells with centroid latitude >= -60).
-MIN_LAT <- -90
+# Bounding box of the EXPORT (degrees): only cells whose centroid lies inside it are written.
+# Tiles entirely outside are skipped; cells of partly covered tiles (and polar caps) are filtered
+# by centroid. This analysis: 60S-90N, all longitudes.
+# Global grid: BBOX <- c(xmin = -180, ymin = -90, xmax = 180, ymax = 90).
+BBOX <- c(xmin = -180, ymin = -60, xmax = 180, ymax = 90)
+stopifnot(BBOX[["xmin"]] >= -180, BBOX[["xmax"]] <= 180, BBOX[["xmin"]] < BBOX[["xmax"]],
+          BBOX[["ymin"]] >= -90, BBOX[["ymax"]] <= 90, BBOX[["ymin"]] < BBOX[["ymax"]])
 
 # Performance: OSM coastlines carry millions of vertices per tile (e.g. Baltic/Finnish
 # archipelagos); unioning and buffering them raw is extremely slow. Each land piece is
@@ -698,6 +701,21 @@ land_for_tile <- function(land, lat0, lon0, tile_step, pad,
 }
 
 
+cells_in_bbox <- function(dggs, grid, bbox = BBOX) {
+  # Keep cells whose centroid lies inside bbox (west/south edges inclusive; east/north edges
+  # inclusive only at 180 / 90).
+  if (is.null(grid) || nrow(grid) == 0) return(grid)
+  geo <- dgSEQNUM_to_GEO(dggs, seqnum_column(grid))
+  lon <- geo$lon_deg
+  lat <- geo$lat_deg
+  lon[lon >= 180]  <- lon[lon >= 180] - 360
+  lon[lon < -180]  <- lon[lon < -180] + 360
+  in_lon <- lon >= bbox[["xmin"]] & (lon < bbox[["xmax"]] | (bbox[["xmax"]] >= 180 & lon <= 180))
+  in_lat <- lat >= bbox[["ymin"]] & (lat < bbox[["ymax"]] | (bbox[["ymax"]] >= 90 & lat <= 90))
+  grid[in_lon & in_lat, , drop = FALSE]
+}
+
+
 cells_owned_by_tile <- function(dggs, grid, lat0, lon0, tile_step,
                                 polar_cap_deg = POLAR_CAP_DEG) {
   # Exact cell centres decide ownership, so tiles never double-count a cell.
@@ -869,8 +887,11 @@ export_global_land <- function(dggs, out_dir, land_shp = LAND_SHP,
   land <- load_land(land_shp)
 
   lats  <- seq(-90, 90 - tile_step, by = tile_step)
-  lats  <- lats[lats >= MIN_LAT]                 # no-op at the default MIN_LAT = -90
+  lats  <- lats[lats + tile_step > BBOX[["ymin"]] & lats < BBOX[["ymax"]]]   # tiles touching BBOX
   lons  <- seq(-180, 180 - tile_step, by = tile_step)
+  lons  <- lons[lons + tile_step > BBOX[["xmin"]] & lons < BBOX[["xmax"]]]
+  cat(sprintf("Export bounding box: lon %g to %g, lat %g to %g (cell centroids)\n",
+              BBOX[["xmin"]], BBOX[["xmax"]], BBOX[["ymin"]], BBOX[["ymax"]]))
   total <- length(lats) * length(lons)
 
   manifest <- data.frame(
@@ -899,15 +920,17 @@ export_global_land <- function(dggs, out_dir, land_shp = LAND_SHP,
 
   # ---- polar caps first: cheap, and they claim their cells before the
   # ---- regular tiles run, so ownership is unambiguous.
-  for (pole in c(if (MIN_LAT <= -90) "south", "north")) {   # south cap only for a global export
+  caps <- c(if (BBOX[["ymin"]] < -90 + POLAR_CAP_DEG) "south",
+            if (BBOX[["ymax"]] >  90 - POLAR_CAP_DEG) "north")
+  for (pole in caps) {
     layer <- sprintf("%s_%s_cap", prefix, pole)
     if (layer %in% manifest$layer) next
 
     t0 <- Sys.time()
-    cap <- cells_for_polar_cap(dggs, land, pole)
+    cap <- cells_in_bbox(dggs, cells_for_polar_cap(dggs, land, pole))
     elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
 
-    if (is.null(cap)) {
+    if (is.null(cap) || nrow(cap) == 0) {
       cat(sprintf("  %s cap: no land cells\n", pole))
       next
     }
@@ -933,12 +956,12 @@ export_global_land <- function(dggs, out_dir, land_shp = LAND_SHP,
 
       cat(sprintf("[%d/%d] %s\n", done, total, layer))
       t0   <- Sys.time()
-      grid <- cells_for_land_tile(
+      grid <- cells_in_bbox(dggs, cells_for_land_tile(
         dggs, land, lat0, lon0, tile_step, cellsize, buffer_deg, land_here = probe
-      )
+      ))
       elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
 
-      if (is.null(grid)) {
+      if (is.null(grid) || nrow(grid) == 0) {
         cat("  no land cells\n")
         next
       }

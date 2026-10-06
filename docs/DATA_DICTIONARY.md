@@ -2,12 +2,8 @@
 
 Grid: ISEA3H resolution 16 (DGGRID), WGS84 (EPSG:4326). Areas in km², population in persons.
 
-**Two spatial extents:**
-- `S90_N90` — the global grid, all latitudes (90°S–90°N): 126,509,398 land cells
-  (`dgg_isea3h16_land_shapefiles_S90_N90.zip`).
-- `S60_N90` — the analysis domain, cells whose centroid lies at or north of 60°S: 114,791,301 cells
-  (centroids and country assignment, per-cell results, summaries). Cells south of 60°S are in the
-  grid but not in the analysis.
+**Spatial domain (`S60_N90`):** every file covers the land cells whose centroid lies at or north
+of 60°S — 114,791,301 cells. Antarctica and other land south of 60°S are not included.
 
 **Gzip CSV conventions** (`*.csv.gz`): one row per cell, sorted by `seqnum`; empty fields are
 missing values; pixel counts and `gaul0_code` are integers; flags are 1 (true) or 0 (false).
@@ -17,10 +13,10 @@ Very small values may be written in scientific notation (e.g. `8.5e-05`).
 
 ## Grid
 
-### `dgg_isea3h16_land_shapefiles_S90_N90.zip`
+### `dgg_isea3h16_land_shapefiles_S60_N90.zip`
 
-474 zipped shapefiles, one per layer: `dgg_isea3h16_land_<n|s>LL_<e|w>LLL.zip` (10° × 10° tile
-named by its south-west corner) and `dgg_isea3h16_land_south_cap.zip`. n = 126,509,398.
+377 zipped shapefiles, one per layer: `dgg_isea3h16_land_<n|s>LL_<e|w>LLL.zip` (10° × 10° tile
+named by its south-west corner). n = 114,791,301.
 
 | Field | Type | Description |
 |---|---|---|
@@ -29,9 +25,7 @@ named by its south-west corner) and `dgg_isea3h16_land_south_cap.zip`. n = 126,5
 
 ## `dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz` — cell centroids and country assignment
 
-Gzip CSV, one row per cell with centroid latitude ≥ 60°S (114,791,301), sorted by `seqnum`.
-Centroids of the remaining grid cells (south of 60°S) are not included; they can be computed from
-the polygons in `dgg_isea3h16_land_shapefiles_S90_N90.zip`.
+Gzip CSV, one row per grid cell (114,791,301), sorted by `seqnum`.
 
 | Column | Description |
 |---|---|

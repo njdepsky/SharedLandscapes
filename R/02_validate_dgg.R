@@ -33,7 +33,7 @@ OSM_EVERY    <- 15L        # use every 15th OSM polygon (by fid) for checks 4-5
 N_INTERIOR   <- 200000L
 N_COASTLINE  <- 200000L
 HEX_AREA_KM2 <- 1.18491
-MIN_LAT      <- -90        # must match MIN_LAT in 01_build_dgg.R (-90 = global export)
+BBOX         <- c(xmin = -180, ymin = -60, xmax = 180, ymax = 90)   # must match BBOX in 01_build_dgg.R
 RUN_CHECKS   <- 0:7        # e.g. 4:7 to rerun only the OSM, antimeridian and superset checks
 
 set.seed(42)   # reproducible sampling
@@ -42,14 +42,17 @@ set.seed(42)   # reproducible sampling
 dggs <- dgconstruct(area = 1, metric = TRUE, resround = "nearest")
 
 
-in_domain <- function(f, min_lat = MIN_LAT) {
-  # Layers are owned by centroid latitude: tile lat0 >= min_lat <=> its cells are in the domain.
+in_domain <- function(f, bbox = BBOX) {
+  # Layers are named by their 10-degree tile; keep layers whose tile touches the bounding box
+  # (an export made with this BBOX contains only such layers anyway).
   b <- basename(f)
-  if (grepl("_south_cap", b)) return(min_lat <= -90)
-  m <- regmatches(b, regexec("_([ns])([0-9]{2})_[ew][0-9]{3}(_pts\\.csv|\\.shp)$", b))[[1]]
-  if (length(m) < 3) return(TRUE)
+  if (grepl("_south_cap", b)) return(bbox[["ymin"]] <= -89.9)
+  if (grepl("_north_cap", b)) return(bbox[["ymax"]] >= 89.9)
+  m <- regmatches(b, regexec("_([ns])([0-9]{2})_([ew])([0-9]{3})(_pts\\.csv|\\.shp)$", b))[[1]]
+  if (length(m) < 5) return(TRUE)
   lat0 <- as.numeric(m[3]) * ifelse(m[2] == "n", 1, -1)
-  lat0 >= min_lat
+  lon0 <- as.numeric(m[5]) * ifelse(m[4] == "e", 1, -1)
+  lat0 + 10 > bbox[["ymin"]] && lat0 < bbox[["ymax"]] && lon0 + 10 > bbox[["xmin"]] && lon0 < bbox[["xmax"]]
 }
 
 
@@ -59,7 +62,8 @@ read_exported_seqnums <- function(export_dir = EXPORT_DIR, prefix = PREFIX) {
   n_all <- length(files)
   files <- files[vapply(files, in_domain, logical(1))]
   if (length(files) < n_all) {
-    cat(sprintf("Domain (centroid lat >= %g): %d of %d layers\n", MIN_LAT, length(files), n_all))
+    cat(sprintf("Domain (bounding box lon %g to %g, lat %g to %g): %d of %d layers\n",
+                BBOX[["xmin"]], BBOX[["xmax"]], BBOX[["ymin"]], BBOX[["ymax"]], length(files), n_all))
   }
   if (!length(files)) stop("No ", prefix, "_*_pts.csv files in ", export_dir)
   cat(sprintf("Reading %d tile centroid files from %s ...\n", length(files), export_dir))
@@ -114,12 +118,15 @@ check_area <- function(cells, land) {
 
 check_points <- function(label, points, dggs, cells) {
   coords <- sf::st_coordinates(points)
-  # Only points safely inside the domain: a point just north of MIN_LAT can sit in a cell whose
-  # centroid is just south of it (cells are ~1 km, ~0.01 deg).
-  in_dom <- if (MIN_LAT <= -90) rep(TRUE, nrow(coords)) else coords[, 2] >= MIN_LAT + 0.02
+  # Only points safely inside the bounding box (cells are ~1 km, ~0.01 deg).
+  m <- 0.02   # margin: a point just inside the box can sit in a cell whose centroid is just outside
+  in_dom <- (BBOX[["xmin"]] <= -180 | coords[, 1] >= BBOX[["xmin"]] + m) &
+            (BBOX[["xmax"]] >=  180 | coords[, 1] <= BBOX[["xmax"]] - m) &
+            (BBOX[["ymin"]] <=  -90 | coords[, 2] >= BBOX[["ymin"]] + m) &
+            (BBOX[["ymax"]] >=   90 | coords[, 2] <= BBOX[["ymax"]] - m)
   if (any(!in_dom)) {
-    cat(sprintf("(%s sample points south of %g excluded)\n",
-                format(sum(!in_dom), big.mark = ","), MIN_LAT + 0.02))
+    cat(sprintf("(%s sample points outside the bounding box excluded)\n",
+                format(sum(!in_dom), big.mark = ",")))
   }
   coords <- coords[in_dom, , drop = FALSE]
   seqnums <- dgGEO_to_SEQNUM(dggs, coords[, 1], coords[, 2])$seqnum
@@ -219,7 +226,7 @@ main <- function() {
   if (any(1:3 %in% RUN_CHECKS)) {
     cat(sprintf("Reading land layer: %s\n", LAND_SHP))
     land <- sf::st_make_valid(sf::st_union(sf::st_geometry(sf::st_read(LAND_SHP, quiet = TRUE))))
-    domain <- sf::st_as_sfc(sf::st_bbox(c(xmin = -180, ymin = MIN_LAT, xmax = 180, ymax = 90),
+    domain <- sf::st_as_sfc(sf::st_bbox(BBOX,
                                         crs = sf::st_crs(land)))
     land <- sf::st_make_valid(sf::st_intersection(land, domain))   # study domain only
     if (1 %in% RUN_CHECKS) check_area(cells, land)

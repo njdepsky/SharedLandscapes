@@ -10,9 +10,9 @@ equal-area hexagonal cells of 1.18491 km² on the authalic sphere (12 pentagons)
 to the land grid if it touches the union of Natural Earth 10m land and OpenStreetMap land
 polygons, buffered outward by 200 m. The buffer absorbs residual shoreline differences between
 these vector coastlines and the 10 m land-cover data used below: tested against 10 m land that
-Natural Earth alone misses, OSM with a 200 m buffer captures 98.9% of it. The grid is global
-[126,509,398 cells in 474 layers]; the study domain is every cell whose centroid lies at or
-north of 60°S [114,791,301 cells]. Cells crossing the antimeridian are stored as east/west
+Natural Earth alone misses, OSM with a 200 m buffer captures 98.9% of it. The study domain is
+every land cell whose centroid lies at or north of 60°S [114,791,301 cells in 377 layers];
+Antarctica and other land south of 60°S are excluded. Cells crossing the antimeridian are stored as east/west
 parts, and grid completeness, uniqueness and seam handling are validated automatically.
 
 ## Land-cover pixel counts

@@ -2,20 +2,19 @@
 
 Code to reproduce the data for 'A global dataset of potential habitat areas in populated landscapes' on a global ~1 km² hexagonal grid:
 
-1. build a **global all-land discrete global grid** (ISEA3H resolution 16, 1.18491 km² cells);
+1. build an **all-land discrete global grid for 60°S–90°N** (ISEA3H resolution 16, 1.18491 km² cells);
 2. count **10 m land-cover pixels** per cell in Google Earth Engine (Dynamic World 2024, ESA
    WorldCover 2021, Global Pasture Watch, Spatial Database of Planted Trees);
 3. add **country** (GAUL 2024, de facto policy for disputed areas) and **population**
    (WorldPop R2025A 2024, 100 m) to every cell;
 4. calculate habitat and landscape extents (Populated / Shared) and write **global and country summaries**.
 
-**Two spatial extents.** The grid is built for the **whole globe (90°S–90°N): 126,509,398 land
-cells**, published as a stand-alone layer (file names marked `S90_N90`). All analysis — Earth
-Engine pixel counts, country assignment, population and landscape classification — covers only
-the **cells whose centroid lies at or north of 60°S: 114,791,301 cells** (file names marked
-`S60_N90`). Antarctica and other land south of 60°S is in the grid but not in the analysis.
+**Spatial domain.** Every file — grid, centroids, country assignment, per-cell results and
+summaries — covers the **land cells whose centroid lies at or north of 60°S: 114,791,301 cells**
+(file names marked `S60_N90`). Antarctica and other land south of 60°S are not included. The grid
+script accepts any bounding box (`BBOX` in `R/01_build_dgg.R`), e.g. a global grid.
 
-**Data:** **[doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)** — the global
+**Data:** **[doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)** — the
 grid, cell centroids and country assignment, per-cell results and summary tables (see
 [Data on Zenodo](#data-on-zenodo)). This repository contains code and documentation only.
 
@@ -26,7 +25,7 @@ grid, cell centroids and country assignment, per-cell results and summary tables
 | Step | Script | Runs in | Output |
 |---|---|---|---|
 | 0 | `R/00_install_packages.R` | R | R packages |
-| 1 | `R/01_build_dgg.R` | R (~5 h) | `data/dgg/` — global land DGG, one layer per 10° tile |
+| 1 | `R/01_build_dgg.R` | R (several hours) | `data/dgg/` — land DGG within `BBOX` (60°S–90°N), one layer per 10° tile |
 | 2 | `R/02_validate_dgg.R` | R (minutes) | validation report (checks 0–7) |
 | 3 | `gee/03_extract_counts.js`, `python/03b_combine_counts.py` | Earth Engine batch (377 export tasks; ~1.1 million EECU-hours); Python | pixel-count CSVs per layer, combined into `data/gee_counts/dgg_counts_2024.csv.gz` |
 | 4 | `python/00_prepare_gaul_l0.py`, `python/04_download_worldpop.py` | Python | GAUL 2024 level 0 GeoPackage; WorldPop 100 m country rasters + global VRT |
@@ -108,13 +107,12 @@ Rscript R/01_build_dgg.R  2>&1 | tee build_dgg.log
 Rscript R/02_validate_dgg.R 2>&1 | tee validate_dgg.log
 ```
 
-Every check must report `OK`. The grid is **global** (Antarctica included); the study
-domain (centroid latitude ≥ 60°S) is applied in steps 3 and 5.
+Every check must report `OK`. The grid covers cells whose centroid lies inside `BBOX`
+(here 60°S–90°N, all longitudes); `R/02_validate_dgg.R` uses the same `BBOX`.
 
 ### 3. Earth Engine counts
 
-1. Upload each layer zip from `data/dgg/` whose tile latitude is ≥ −60 (`n00…n80`, `s10…s60`,
-   and `north_cap` if present; not `s70…s90` or `south_cap`) as a **table asset** into one
+1. Upload each layer zip from `data/dgg/` as a **table asset** into one
    asset folder.
    Many files: stage them in Cloud Storage and use `earthengine upload table` (see the end of
    `R/01_build_dgg.R`).
@@ -166,16 +164,15 @@ See [`docs/METHODS.md`](docs/METHODS.md).
 
 | File | Content |
 |---|---|
-| `dgg_isea3h16_land_shapefiles_S90_N90.zip` | global land DGG: 474 zipped layer shapefiles (`seqnum` as text), 126,509,398 cells |
+| `dgg_isea3h16_land_shapefiles_S60_N90.zip` | land DGG, 60°S–90°N: 377 zipped layer shapefiles (`seqnum` as text), 114,791,301 cells |
 | `dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz` | centroid and country assignment of each cell with centroid latitude ≥ 60°S |
 | `dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz` | per-cell results: Earth Engine counts, population, land and habitat areas, landscape classes |
 | `dataset_summaries.zip` | `global_summary.csv` and `country_summary.csv` |
 | `DATA_DICTIONARY.md` | column definitions for all files (also in [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md)) |
 
-`S90_N90` marks the global grid (all latitudes); `S60_N90` marks files covering cells with
-centroid latitude ≥ 60°S. The shapefile archive bundles the layer zips written by step 1:
-`cd data/dgg && zip -0 dgg_isea3h16_land_shapefiles_S90_N90.zip dgg_isea3h16_land_*.zip`. Cell
-centroids for the full grid are written by step 1 (`*_pts.csv`) or can be computed from the polygons.
+`S60_N90` marks files covering cells with centroid latitude ≥ 60°S. The shapefile archive
+bundles the layer zips written by step 1:
+`cd data/dgg && zip -0 dgg_isea3h16_land_shapefiles_S60_N90.zip dgg_isea3h16_land_*.zip`.
 
 WorldPop, GAUL, Natural Earth and OSM inputs are not redistributed; download them from their
 sources above.

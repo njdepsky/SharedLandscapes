@@ -32,8 +32,8 @@ GEE_INPUT = DATA_DIR / "gee_counts" / "dgg_counts_2024.csv.gz"
 GEE_INPUT_PATTERN = "dgg_counts_*.csv"     # used only when GEE_INPUT is a folder
 
 # --- Study domain ---------------------------------------------------------------------------
-# Cells whose centroid latitude >= MIN_LAT (the DGG itself is global). Must match the layers
-# extracted in Earth Engine (03_extract_counts.js: MIN_LAT).
+# Cells whose centroid latitude >= MIN_LAT. Must match BBOX ymin in R/01_build_dgg.R and MIN_LAT
+# in gee/03_extract_counts.js (with the 60S BBOX used here, every grid layer is in the domain).
 MIN_LAT = -60.0
 
 # --- Run control ----------------------------------------------------------------------------
