@@ -2,7 +2,7 @@
 
 Grid: ISEA3H resolution 16 (DGGRID), WGS84 (EPSG:4326). Areas in km², population in persons.
 
-**Spatial domain (`S60_N90`):** every file covers the land cells whose centroid lies at or north
+**Spatial domain:** every file covers the land cells whose centroid lies at or north
 of 60°S — 114,791,301 cells. Antarctica and other land south of 60°S are not included.
 
 **Gzip CSV conventions** (`*.csv.gz`): one row per cell, sorted by `seqnum`; empty fields are
@@ -13,7 +13,7 @@ Very small values may be written in scientific notation (e.g. `8.5e-05`).
 
 ## Grid
 
-### `dgg_isea3h16_land_shapefiles_S60_N90.zip`
+### `dgg_isea3h16_land_shapefiles.zip`
 
 377 zipped shapefiles, one per layer: `dgg_isea3h16_land_<n|s>LL_<e|w>LLL.zip` (10° × 10° tile
 named by its south-west corner). n = 114,791,301.
@@ -23,7 +23,7 @@ named by its south-west corner). n = 114,791,301.
 | `seqnum` | text | cell id (DGGRID sequence number), stored as text because 9-digit integers overflow shapefile numeric fields |
 | geometry | polygon / multipolygon | cell boundary; cells crossing ±180° are split into east and west parts |
 
-## `dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz` — cell centroids and country assignment
+## `dgg_isea3h16_land_centroids_iso3.csv.gz` — cell centroids and country assignment
 
 Gzip CSV, one row per grid cell (114,791,301), sorted by `seqnum`.
 
@@ -38,7 +38,7 @@ Gzip CSV, one row per grid cell (114,791,301), sorted by `seqnum`.
 | `dist_km` | geodesic distance from the centroid to the matched polygon for `nearest` / `ne_remote` matches (km) |
 | `wrapped` | 1 if the cell crosses the antimeridian (stored as east/west parts) |
 
-## `dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz` — per-cell results
+## `dgg_cells_shared_landscapes_dataset.csv.gz` — per-cell results
 
 Gzip CSV, one row per cell with centroid latitude ≥ 60°S (114,791,301), sorted by `seqnum`;
 29 columns. `popland` and `shland` were computed from unrounded values, so a cell whose fraction
@@ -50,7 +50,7 @@ lies within 0.000005 of a threshold may appear to contradict its flag.
 |---|---|
 | `seqnum` | cell id |
 | `longitude`, `latitude` | cell centroid (degrees) |
-| `gaul0_code`, `gaul0_name`, `iso3_code`, `iso3_admin` | as in `dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz` |
+| `gaul0_code`, `gaul0_name`, `iso3_code`, `iso3_admin` | as in `dgg_isea3h16_land_centroids_iso3.csv.gz` |
 
 **Earth Engine pixel counts** — numbers of 10 m pixels (EPSG:4326, 10 m scale) whose centres fall
 inside the cell; definitions in `docs/METHODS.md`.

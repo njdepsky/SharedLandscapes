@@ -10,8 +10,8 @@ Code to reproduce the data for 'A global dataset of potential habitat areas in p
 4. calculate habitat and landscape extents (Populated / Shared) and write **global and country summaries**.
 
 **Spatial domain.** Every file — grid, centroids, country assignment, per-cell results and
-summaries — covers the **land cells whose centroid lies at or north of 60°S: 114,791,301 cells**
-(file names marked `S60_N90`). Antarctica and other land south of 60°S are not included. The grid
+summaries — covers the **land cells whose centroid lies at or north of 60°S: 114,791,301 cells**.
+Antarctica and other land south of 60°S are not included. The grid
 script accepts any bounding box (`BBOX` in `R/01_build_dgg.R`), e.g. a global grid.
 
 **Data:** **[doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)** — the
@@ -36,7 +36,7 @@ Run everything **from the repository root**. Set `DATA_DIR` to keep `data/` else
 (e.g. a fast local disk; avoid synced folders such as Dropbox for the multi-GB intermediates).
 
 **Rerunning steps 4–5 without Earth Engine:** build the grid (steps 1–2), then set `GEE_INPUT`
-in `python/config.py` to the published `dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz`, which
+in `python/config.py` to the published `dgg_cells_shared_landscapes_dataset.csv.gz`, which
 contains the Earth Engine counts.
 
 ---
@@ -143,9 +143,9 @@ It must run from a terminal (it starts worker processes), not a notebook.
 
 ## Outputs (`data/outputs/`)
 
-- `dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz` — centroid and country assignment of every
+- `dgg_isea3h16_land_centroids_iso3.csv.gz` — centroid and country assignment of every
   cell with centroid latitude ≥ 60°S (GAUL fields, de facto `iso3_admin`, how it was assigned).
-- `dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz` — per-cell results (29 columns): location,
+- `dgg_cells_shared_landscapes_dataset.csv.gz` — per-cell results (29 columns): location,
   country, Earth Engine pixel counts, population, land and habitat areas and fractions,
   `popland` (Populated Landscape), `shland` (Shared Landscape).
 - `dataset_summaries.zip` — `global_summary.csv` (one row) and `country_summary.csv`: areas,
@@ -164,15 +164,14 @@ See [`docs/METHODS.md`](docs/METHODS.md).
 
 | File | Content |
 |---|---|
-| `dgg_isea3h16_land_shapefiles_S60_N90.zip` | land DGG, 60°S–90°N: 377 zipped layer shapefiles (`seqnum` as text), 114,791,301 cells |
-| `dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz` | centroid and country assignment of each cell with centroid latitude ≥ 60°S |
-| `dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz` | per-cell results: Earth Engine counts, population, land and habitat areas, landscape classes |
+| `dgg_isea3h16_land_shapefiles.zip` | land DGG, 60°S–90°N: 377 zipped layer shapefiles (`seqnum` as text), 114,791,301 cells |
+| `dgg_isea3h16_land_centroids_iso3.csv.gz` | centroid and country assignment of each cell with centroid latitude ≥ 60°S |
+| `dgg_cells_shared_landscapes_dataset.csv.gz` | per-cell results: Earth Engine counts, population, land and habitat areas, landscape classes |
 | `dataset_summaries.zip` | `global_summary.csv` and `country_summary.csv` |
 | `DATA_DICTIONARY.md` | column definitions for all files (also in [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md)) |
 
-`S60_N90` marks files covering cells with centroid latitude ≥ 60°S. The shapefile archive
-bundles the layer zips written by step 1:
-`cd data/dgg && zip -0 dgg_isea3h16_land_shapefiles_S60_N90.zip dgg_isea3h16_land_*.zip`.
+The shapefile archive bundles the layer zips written by step 1:
+`cd data/dgg && zip -0 dgg_isea3h16_land_shapefiles.zip dgg_isea3h16_land_*.zip`.
 
 WorldPop, GAUL, Natural Earth and OSM inputs are not redistributed; download them from their
 sources above.

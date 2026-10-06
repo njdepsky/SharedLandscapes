@@ -28,13 +28,12 @@ one table, or every file matching a pattern in a folder), GAUL 2024 L0, Natural 
 WorldPop VRT (04_download_worldpop.py).
 
 Outputs (config.OUT_DIR)
-  dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz      cell centroids and country assignment
-  dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz   per-cell counts, population, areas,
-                                                       fractions, popland, shland
-  dataset_summaries.zip                                global_summary.csv + country_summary.csv
-                                                       (also written unzipped in dataset_summaries/)
-  dgg_cells_country_population.parquet                 intermediate: country fields, cell area,
-                                                       population
+  dgg_isea3h16_land_centroids_iso3.csv.gz      cell centroids and country assignment
+  dgg_cells_shared_landscapes_dataset.csv.gz   per-cell counts, population, areas, fractions,
+                                               popland, shland
+  dataset_summaries.zip                        global_summary.csv + country_summary.csv
+                                               (also written unzipped in dataset_summaries/)
+  dgg_cells_country_population.parquet         intermediate: country fields, cell area, population
   (all CSVs gzip; column lists and precision: CENTROID_COUNTRY_COLS, CELL_COLS, CSV_DECIMALS)
 
 Run from the repository root, in a terminal (worker processes cannot import a notebook):
@@ -100,8 +99,8 @@ STEP2 = WORKDIR / "step2_nearest_country.parquet"
 ZONALDIR = WORKDIR / f"zonal_population_{Path(WORLDPOP).stem}"   # one parquet per DGG layer
 OUT = OUT_DIR / "dgg_cells_country_population.parquet"
 # Published outputs (file names as deposited)
-CENTROIDS_COUNTRY = OUT_DIR / "dgg_isea3h16_land_centroids_iso3_S60_N90.csv.gz"
-FINAL = OUT_DIR / "dgg_cells_shared_landscapes_S60_N90_dataset.csv.gz"
+CENTROIDS_COUNTRY = OUT_DIR / "dgg_isea3h16_land_centroids_iso3.csv.gz"
+FINAL = OUT_DIR / "dgg_cells_shared_landscapes_dataset.csv.gz"
 SUMMARY_DIR = OUT_DIR / "dataset_summaries"
 SUMMARY_ZIP = OUT_DIR / "dataset_summaries.zip"
 
