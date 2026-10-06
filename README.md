@@ -9,13 +9,12 @@ Code to reproduce the data for 'A global dataset of potential habitat areas in p
    (WorldPop R2025A 2024, 100 m) to every cell;
 4. calculate habitat and landscape extents (Populated / Shared) and write **global and country summaries**.
 
-**Spatial domain.** Every file — grid, centroids, country assignment, per-cell results and
-summaries — covers the **land cells whose centroid lies at or north of 60°S: 114,791,301 cells**.
+**Spatial domain.** Every file — grid, per-cell results and summaries — covers the **land cells whose centroid lies at or north of 60°S: 114,791,301 cells**.
 Antarctica and other land south of 60°S are not included. The grid
 script accepts any bounding box (`BBOX` in `R/01_build_dgg.R`), e.g. a global grid.
 
 **Data:** **[doi:10.5281/zenodo.23168754](https://doi.org/10.5281/zenodo.23168754)** — the
-grid, cell centroids and country assignment, per-cell results and summary tables (see
+grid, per-cell results (with centroids and country assignment) and summary tables (see
 [Data on Zenodo](#data-on-zenodo)). This repository contains code and documentation only.
 
 ---
@@ -143,10 +142,9 @@ It must run from a terminal (it starts worker processes), not a notebook.
 
 ## Outputs (`data/outputs/`)
 
-- `dgg_isea3h16_land_centroids_iso3.csv.gz` — centroid and country assignment of every
-  cell with centroid latitude ≥ 60°S (GAUL fields, de facto `iso3_admin`, how it was assigned).
-- `dgg_cells_shared_landscapes_dataset.csv.gz` — per-cell results (29 columns): location,
-  country, Earth Engine pixel counts, population, land and habitat areas and fractions,
+- `dgg_cells_shared_landscapes_dataset.csv.gz` — per-cell results (33 columns): centroid,
+  country assignment (GAUL fields, de facto `iso3_admin`, how it was assigned), Earth Engine
+  pixel counts, population, land and habitat areas and fractions,
   `popland` (Populated Landscape), `shland` (Shared Landscape).
 - `dataset_summaries.zip` — `global_summary.csv` (one row) and `country_summary.csv`: areas,
   fractions and the fraction of population in Shared Landscapes (also in `dataset_summaries/`).
@@ -165,8 +163,7 @@ See [`docs/METHODS.md`](docs/METHODS.md).
 | File | Content |
 |---|---|
 | `dgg_isea3h16_land_shapefiles.zip` | land DGG, 60°S–90°N: 377 zipped layer shapefiles (`seqnum` as text), 114,791,301 cells |
-| `dgg_isea3h16_land_centroids_iso3.csv.gz` | centroid and country assignment of each cell with centroid latitude ≥ 60°S |
-| `dgg_cells_shared_landscapes_dataset.csv.gz` | per-cell results: Earth Engine counts, population, land and habitat areas, landscape classes |
+| `dgg_cells_shared_landscapes_dataset.csv.gz` | per-cell results: centroid, country assignment, Earth Engine counts, population, land and habitat areas, landscape classes |
 | `dataset_summaries.zip` | `global_summary.csv` and `country_summary.csv` |
 | `DATA_DICTIONARY.md` | column definitions for all files (also in [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md)) |
 

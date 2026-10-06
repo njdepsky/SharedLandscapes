@@ -28,13 +28,12 @@ one table, or every file matching a pattern in a folder), GAUL 2024 L0, Natural 
 WorldPop VRT (04_download_worldpop.py).
 
 Outputs (config.OUT_DIR)
-  dgg_isea3h16_land_centroids_iso3.csv.gz      cell centroids and country assignment
-  dgg_cells_shared_landscapes_dataset.csv.gz   per-cell counts, population, areas, fractions,
-                                               popland, shland
+  dgg_cells_shared_landscapes_dataset.csv.gz   per-cell location, country assignment, counts,
+                                               population, areas, fractions, popland, shland
   dataset_summaries.zip                        global_summary.csv + country_summary.csv
                                                (also written unzipped in dataset_summaries/)
   dgg_cells_country_population.parquet         intermediate: country fields, cell area, population
-  (all CSVs gzip; column lists and precision: CENTROID_COUNTRY_COLS, CELL_COLS, CSV_DECIMALS)
+  (gzip CSV; column list and precision: CELL_COLS, CSV_DECIMALS)
 
 Run from the repository root, in a terminal (worker processes cannot import a notebook):
     python -u python/05_postprocess.py 2>&1 | tee postprocess.log
@@ -99,7 +98,6 @@ STEP2 = WORKDIR / "step2_nearest_country.parquet"
 ZONALDIR = WORKDIR / f"zonal_population_{Path(WORLDPOP).stem}"   # one parquet per DGG layer
 OUT = OUT_DIR / "dgg_cells_country_population.parquet"
 # Published outputs (file names as deposited)
-CENTROIDS_COUNTRY = OUT_DIR / "dgg_isea3h16_land_centroids_iso3.csv.gz"
 FINAL = OUT_DIR / "dgg_cells_shared_landscapes_dataset.csv.gz"
 SUMMARY_DIR = OUT_DIR / "dataset_summaries"
 SUMMARY_ZIP = OUT_DIR / "dataset_summaries.zip"
@@ -508,10 +506,8 @@ def summarize(final, iso3_to_name):
 # resolution: 7 decimals of a degree ~ 1 cm, of a km2 = 0.1 m2; one 10 m pixel is ~0.000085 of
 # a cell's land, so 5 decimals resolve it). Pixel counts are written as integers, flags as 1/0,
 # missing values as empty fields. popland / shland are computed from unrounded values.
-CENTROID_COUNTRY_COLS = ["seqnum", "longitude", "latitude", "gaul0_code", "gaul0_name", "iso3_code",
-                  "iso3_admin", "admin_source", "match_type", "dist_km", "wrapped"]
 CELL_COLS = ["seqnum", "longitude", "latitude", "gaul0_code", "gaul0_name", "iso3_code", "iso3_admin",
-             "n_total", "n_land", "n_freshwater", "n_ice", "n_crop", "n_built", "n_barren", "n_pasture",
+             "admin_source", "match_type", "dist_km", "wrapped", "n_total", "n_land", "n_freshwater", "n_ice", "n_crop", "n_built", "n_barren", "n_pasture",
              "n_other_intensive_treecrop", "n_nonhabitat", "n_habitat", "cell_area_km2", "pop_sum",
              "pop_density", "n_valid_pop_px", "land_area_km2", "habitat_area_km2", "nonhabitat_frac",
              "habitat_frac", "pop_density_land", "popland", "shland"]
@@ -611,7 +607,6 @@ def run_step6(iso3_to_name):
     print(f"Step 6: wrote {SUMMARY_DIR}/global_summary.csv, country_summary.csv and {SUMMARY_ZIP.name}",
           flush=True)
 
-    write_csv_gz(final, CENTROID_COUNTRY_COLS, CENTROIDS_COUNTRY)
     write_csv_gz(final, CELL_COLS, FINAL)
 
     # --- QA: groups must close on the global totals
