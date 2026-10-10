@@ -67,4 +67,4 @@ GAUL codes as disputed we apply de facto administration; Abyei, Bir Tawil and th
 have no single administrator and are reported as unassigned [12,692 km² of land in total].
 Jammu and Kashmir and adjacent India–China border areas are assigned per cell using Natural
 Earth's de facto boundaries (India, Pakistan, China; Siachen Glacier to India). Elsewhere GAUL's
-country coding is used as published. Continents follow GAUL.
+country coding is used as published.

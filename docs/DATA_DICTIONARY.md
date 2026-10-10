@@ -43,7 +43,8 @@ lies within 0.000005 of a threshold may appear to contradict its flag.
 | `wrapped` | 1 if the cell crosses the antimeridian (stored as east/west parts) |
 
 **Earth Engine pixel counts** — numbers of 10 m pixels (EPSG:4326, 10 m scale) whose centres fall
-inside the cell; definitions in `docs/METHODS.md`.
+inside the cell; definitions in `docs/METHODS.md` of the code repository
+(https://github.com/njdepsky/SharedLandscapes).
 
 | Column | Description |
 |---|---|
@@ -86,7 +87,9 @@ individually.
 
 Contains `global_summary.csv` (one row, `group` = `Global`) and `country_summary.csv` (one row per
 de facto country: `group` = name, `iso3`; `--` = unassigned), which share these columns. Population fractions use
-all cells with centroid latitude ≥ 60°S (WorldPop R2025A, 2024); fractions are rounded to 4 decimals.
+all cells with centroid latitude ≥ 60°S (WorldPop R2025A, 2024); values are written with 4 decimals.
+A fraction is empty when its denominator is zero (e.g. a territory without Populated Landscapes or
+without population).
 
 | Column | Description |
 |---|---|
