@@ -506,8 +506,15 @@ def summarize(final, iso3_to_name):
 # resolution: 7 decimals of a degree ~ 1 cm, of a km2 = 0.1 m2; one 10 m pixel is ~0.000085 of
 # a cell's land, so 5 decimals resolve it). Pixel counts are written as integers, flags as 1/0,
 # missing values as empty fields. popland / shland are computed from unrounded values.
+#
+# n_barren (Dynamic World bare ground) is counted in Earth Engine and read in, but deliberately NOT
+# written to the published table: bare ground is not a non-habitat class, so it is already part of
+# n_habitat, alongside other habitat sub-classes that are not identified individually. Publishing
+# one habitat sub-class on its own would suggest a breakdown of n_habitat that the data do not
+# provide, so it is omitted to avoid confusion.
 CELL_COLS = ["seqnum", "longitude", "latitude", "gaul0_code", "gaul0_name", "iso3_code", "iso3_admin",
-             "admin_source", "match_type", "dist_km", "wrapped", "n_total", "n_land", "n_freshwater", "n_ice", "n_crop", "n_built", "n_barren", "n_pasture",
+             "admin_source", "match_type", "dist_km", "wrapped", "n_total", "n_land", "n_freshwater", "n_ice",
+             "n_crop", "n_built", "n_pasture",
              "n_other_intensive_treecrop", "n_nonhabitat", "n_habitat", "cell_area_km2", "pop_sum",
              "pop_density", "n_valid_pop_px", "land_area_km2", "habitat_area_km2", "nonhabitat_frac",
              "habitat_frac", "pop_density_land", "popland", "shland"]

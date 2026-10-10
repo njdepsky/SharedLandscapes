@@ -17,6 +17,13 @@ script accepts any bounding box (`BBOX` in `R/01_build_dgg.R`), e.g. a global gr
 grid, per-cell results (with centroids and country assignment) and summary tables (see
 [Data on Zenodo](#data-on-zenodo)). This repository contains code and documentation only.
 
+| Zenodo file | Produced by |
+|---|---|
+| `dgg_isea3h16_land_shapefiles.zip` | `R/01_build_dgg.R` (step 1: one zipped shapefile per 10° layer), validated by `R/02_validate_dgg.R` (step 2); the layer zips are bundled with `zip -0` (see [Data on Zenodo](#data-on-zenodo)) |
+| `dgg_cells_shared_landscapes_dataset.csv.gz` | `python/05_postprocess.py` (step 5), from the grid (step 1), the Earth Engine counts (`gee/03_extract_counts.js`, combined by `python/03b_combine_counts.py`), GAUL 2024 level 0 (`python/00_prepare_gaul_l0.py`) and WorldPop (`python/04_download_worldpop.py`) |
+| `dataset_summaries.zip` | `python/05_postprocess.py` (step 5), from the same per-cell values |
+| `DATA_DICTIONARY.md` | written by hand; maintained as [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md) |
+
 ---
 
 ## Pipeline
@@ -142,7 +149,7 @@ It must run from a terminal (it starts worker processes), not a notebook.
 
 ## Outputs (`data/outputs/`)
 
-- `dgg_cells_shared_landscapes_dataset.csv.gz` — per-cell results (33 columns): centroid,
+- `dgg_cells_shared_landscapes_dataset.csv.gz` — per-cell results (32 columns): centroid,
   country assignment (GAUL fields, de facto `iso3_admin`, how it was assigned), Earth Engine
   pixel counts, population, land and habitat areas and fractions,
   `popland` (Populated Landscape), `shland` (Shared Landscape).

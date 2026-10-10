@@ -25,7 +25,8 @@ least 10 pixels. On land, crop, built-up and bare ground are pixels where that D
 class occurs in more than 40% of observations; pasture is Global Pasture Watch cultivated
 grassland; tree crops are plantations (class 2) in the Spatial Database of Planted Trees (SDPT)
 Version 2.0. Non-habitat pixels are crop, built-up, pasture or tree crop; habitat pixels are the
-remaining land pixels. All counts refer to the same 10 m pixels (EPSG:4326): all classes are
+remaining land pixels; bare ground is counted in Earth Engine but, like other habitat sub-classes,
+is reported only as part of habitat. All counts refer to the same 10 m pixels (EPSG:4326): all classes are
 counted together in a single pass, and the 30 m Global Pasture Watch and the SDPT layers were
 resampled to this 10 m grid by nearest neighbour before counting, so their class boundaries retain
 the source resolution.

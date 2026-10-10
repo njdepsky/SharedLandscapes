@@ -26,7 +26,7 @@ named by its south-west corner). n = 114,791,301.
 ## `dgg_cells_shared_landscapes_dataset.csv.gz` — per-cell results
 
 Gzip CSV, one row per cell with centroid latitude ≥ 60°S (114,791,301), sorted by `seqnum`;
-33 columns. `popland` and `shland` were computed from unrounded values, so a cell whose fraction
+32 columns. `popland` and `shland` were computed from unrounded values, so a cell whose fraction
 lies within 0.000005 of a threshold may appear to contradict its flag.
 
 **Location and country**
@@ -51,11 +51,15 @@ inside the cell; definitions in `docs/METHODS.md`.
 | `n_land` | valid pixels that are not persistent freshwater or persistent snow/ice |
 | `n_freshwater` | persistent freshwater pixels (Dynamic World water ≥ 95% of observations, clusters ≥ 10 pixels) |
 | `n_ice` | persistent snow/ice pixels (Dynamic World snow/ice ≥ 99% of observations, clusters ≥ 10 pixels) |
-| `n_crop`, `n_built`, `n_barren` | land pixels where that Dynamic World class occurs in > 40% of observations |
+| `n_crop`, `n_built` | land pixels where that Dynamic World class (crop, built-up) occurs in > 40% of observations |
 | `n_pasture` | land pixels of cultivated grassland (Global Pasture Watch, 2022) |
 | `n_other_intensive_treecrop` | land pixels of planted trees, class 2 (Spatial Database of Planted Trees, Version 2.0) |
 | `n_nonhabitat` | land pixels that are crop, built-up, pasture or tree crop |
 | `n_habitat` | `n_land − n_nonhabitat` |
+
+Bare ground (Dynamic World `bare`) is counted in Earth Engine but not published as a separate
+column: it is part of `n_habitat`, like other habitat sub-classes that are not identified
+individually.
 
 **Population (WorldPop R2025A, 2024, 100 m constrained)**
 
